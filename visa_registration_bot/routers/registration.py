@@ -1,20 +1,30 @@
+from __future__ import annotations
+
 import re
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from aiogram import F, Router
 from aiogram.filters import CommandStart, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, ContentType, Message
 
-from ..callbacks.factory import RegistrationCallbackFactory
-from ..database.mongodb import save_application
-from ..keyboards.inline import confirmation_keyboard, registration_keyboard
-from ..states.registration import VisaRegistration
+from ..callbacks import RegistrationCallbackFactory
+from ..config import BotConfig
+from ..database import save_application
+from ..keyboards import confirmation_keyboard, registration_keyboard
+from ..states import VisaRegistration
 
 router = Router()
+_config: Optional[BotConfig] = None
 
 PHONE_PATTERN = re.compile(r"^\+?[0-9\s()-]{6,20}$")
 EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+def setup_registration_router(config: BotConfig) -> Router:
+    global _config
+    _config = config
+    return router
 
 
 async def _reset_state(state: FSMContext) -> None:
@@ -44,7 +54,7 @@ async def start_registration(callback: CallbackQuery, state: FSMContext) -> None
 
 @router.message(StateFilter(VisaRegistration.first_name))
 async def process_first_name(message: Message, state: FSMContext) -> None:
-    if not message.text or len(message.text) < 2:
+    if not message.text or len(message.text.strip()) < 2:
         await message.answer("Ism juda qisqa. Iltimos, qayta kiriting.")
         return
 
@@ -55,7 +65,7 @@ async def process_first_name(message: Message, state: FSMContext) -> None:
 
 @router.message(StateFilter(VisaRegistration.last_name))
 async def process_last_name(message: Message, state: FSMContext) -> None:
-    if not message.text or len(message.text) < 2:
+    if not message.text or len(message.text.strip()) < 2:
         await message.answer("Familiya juda qisqa. Iltimos, qayta kiriting.")
         return
 
@@ -90,11 +100,14 @@ async def process_email(message: Message, state: FSMContext) -> None:
     await state.update_data(email=message.text.strip())
     await state.set_state(VisaRegistration.passport_photo)
     await message.answer(
-        "Pasportingizning fotosuratini yuboring. Ilova sifatida fayl yoki surat yuborishingiz mumkin.",
+        "Pasportingizning fotosuratini yuboring. Ilova sifatida fayl yoki surat yuborishingiz mumkin."
     )
 
 
-@router.message(StateFilter(VisaRegistration.passport_photo), F.content_type.in_({ContentType.PHOTO, ContentType.DOCUMENT}))
+@router.message(
+    StateFilter(VisaRegistration.passport_photo),
+    F.content_type.in_({ContentType.PHOTO, ContentType.DOCUMENT}),
+)
 async def process_passport_photo(message: Message, state: FSMContext) -> None:
     file_id = message.photo[-1].file_id if message.photo else message.document.file_id
     await state.update_data(passport_photo=file_id)
@@ -109,7 +122,10 @@ async def process_passport_photo_invalid(message: Message) -> None:
     await message.answer("Iltimos, pasport fotosuratini yuboring.")
 
 
-@router.message(StateFilter(VisaRegistration.personal_photo), F.content_type == ContentType.PHOTO)
+@router.message(
+    StateFilter(VisaRegistration.personal_photo),
+    F.content_type == ContentType.PHOTO,
+)
 async def process_personal_photo(message: Message, state: FSMContext) -> None:
     await state.update_data(personal_photo=message.photo[-1].file_id)
     await state.set_state(VisaRegistration.confirmation)
@@ -121,7 +137,7 @@ async def process_personal_photo(message: Message, state: FSMContext) -> None:
         f"Familiya: {data['last_name']}\n"
         f"Telefon: {data['phone_number']}\n"
         f"Email: {data['email']}\n"
-        "\nHammasi to'g'rimi?", 
+        "\nHammasi to'g'rimi?",
         reply_markup=confirmation_keyboard(),
     )
 
@@ -131,7 +147,10 @@ async def process_personal_photo_invalid(message: Message) -> None:
     await message.answer("Iltimos, o'zingizning fotosuratingizni yuboring.")
 
 
-@router.callback_query(RegistrationCallbackFactory.filter(F.action == "restart"), StateFilter(VisaRegistration.confirmation))
+@router.callback_query(
+    RegistrationCallbackFactory.filter(F.action == "restart"),
+    StateFilter(VisaRegistration.confirmation),
+)
 async def restart_registration(callback: CallbackQuery, state: FSMContext) -> None:
     await callback.answer()
     if callback.message:
@@ -143,14 +162,22 @@ async def restart_registration(callback: CallbackQuery, state: FSMContext) -> No
     await state.set_state(VisaRegistration.first_name)
 
 
-@router.callback_query(RegistrationCallbackFactory.filter(F.action == "confirm"), StateFilter(VisaRegistration.confirmation))
+@router.callback_query(
+    RegistrationCallbackFactory.filter(F.action == "confirm"),
+    StateFilter(VisaRegistration.confirmation),
+)
 async def confirm_registration(callback: CallbackQuery, state: FSMContext) -> None:
     await callback.answer("Ma'lumotlar saqlandi")
     if callback.message:
         await callback.message.edit_reply_markup()
+
     data: Dict[str, Any] = await state.get_data()
     data.update(user_id=callback.from_user.id)
-    await save_application(data)
+
+    if _config is None:
+        raise RuntimeError("Registration router has not been configured with BotConfig")
+
+    await save_application(_config, data)
     await callback.message.answer(
         "Rahmat! Arizangiz qabul qilindi. Tez orada operatorlarimiz siz bilan bog'lanadi."
     )
