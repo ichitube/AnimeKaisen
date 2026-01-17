@@ -1,13 +1,15 @@
 import random
 import string
 
-from aiogram import Router, Bot
-
-from aiogram.types import Message
+from aiogram import Router, Bot, F
+from aiogram.fsm.context import FSMContext
+from utils.states import TestAvatar
+from aiogram.types import Message, ReplyParameters
 from aiogram.filters import Command
 # from keyboards.builders import inline_builder
 from data import mongodb
 from data.mongodb import db
+from collections import defaultdict, deque
 
 router = Router()
 
@@ -233,6 +235,34 @@ async def fill_profile(message: Message):
     else:
         await message.answer("У вас нет прав на выполнение этой команды")
 
+@router.message(Command("test"))
+async def test_avatar_start(message: Message, state: FSMContext):
+    await message.answer("Отправьте медиафайл (фото/видео/документ/аудио):")
+    await state.set_state(TestAvatar.waiting_for_avatar)
+
+
+@router.message(
+    TestAvatar.waiting_for_avatar,
+    F.photo | F.video | F.document | F.animation | F.audio | F.voice | F.video_note
+)
+async def test_avatar_echo_media(message: Message, state: FSMContext):
+    caption = (f"❖ ✨ Редкость: None"
+                   f"\n❖ 🗺 Вселенная: None"
+                   f"\n\n   ✊🏻 Сила: 0"
+                   f"\n   👣 Ловкость: 0"
+                   f"\n   🧠 Интелект: 0"
+                   f"\n   ⚜️ Мощь: 000")
+
+    await message.copy_to(
+        chat_id=message.chat.id,
+        caption=caption,
+        # чтобы бот именно ОТВЕТИЛ на сообщение пользователя:
+        reply_parameters=ReplyParameters(message_id=message.message_id),
+        # (альтернатива — старый параметр reply_to_message_id тоже есть,
+        # но reply_parameters сейчас основной в Bot API)
+    )
+
+    await state.clear()
 # @router.message(Command("t_f"))
 # async def ret(message: Message):
 #     await message.answer_photo("",

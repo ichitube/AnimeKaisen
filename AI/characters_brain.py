@@ -1,4 +1,3 @@
-# ai_dialog.py
 import asyncio
 import os, logging
 from dotenv import load_dotenv
@@ -9,7 +8,7 @@ from openai import OpenAI
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery, InputMediaAnimation, InputMediaPhoto
 from aiogram.fsm.context import FSMContext
-from keyboards.builders import reply_builder, inline_builder, menu_button
+from keyboards.builders import reply_builder, menu_button
 
 from data import mongodb, character_photo
 from utils.states import AI

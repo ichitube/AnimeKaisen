@@ -32,7 +32,7 @@ logging.getLogger("aiogram.dispatcher").setLevel(logging.WARNING)
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 # Токен можно держать в переменной окружения BOT_TOKEN
-BOT_TOKEN = os.getenv("BOT_TOKEN", "6776753252:AAH4FKaWyegHYHnh_RBJINk2sEhtaebxWrk")
+BOT_TOKEN = os.getenv("BOT_TOKEN", "Если нет берется этот")
 
 bot = Bot(
     token=BOT_TOKEN,
@@ -92,14 +92,14 @@ async def main() -> None:
         characters_brain.router,
     )
 
-    # Мидлвари (по желанию)
+    # Мидлвари
     # dp.callback_query.middleware(AntiFloodMiddleware())
     # dp.message.middleware(AntiFloodMiddlewareM())
 
-    # На всякий случай снимаем вебхук
+    # снимаем вебхук
     await bot.delete_webhook(drop_pending_updates=True)
 
-    # Запускаем поллинг
+    # Запуск поллинга
     await dp.start_polling(bot)
 
 if __name__ == "__main__":

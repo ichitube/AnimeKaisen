@@ -1,0 +1,23 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments & IDE junk
+.venv/
+.idea/
+.vscode/
+
+# Git & local files
+.git/
+.gitignore
+*.log
+.env
+*.sqlite3
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Other
+*.zip

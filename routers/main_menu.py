@@ -8,9 +8,10 @@ from aiogram.types import Message, CallbackQuery, InputMediaAnimation, InputMedi
 from aiogram.utils.keyboard import InlineKeyboardMarkup, InlineKeyboardButton
 from data import mongodb, character_photo
 from filters.chat_type import ChatTypeFilter
-from keyboards.builders import inline_builder, menu_button
+from keyboards.builders import inline_builder
 from recycling import profile
 from utils.states import Promo
+from aiogram.exceptions import TelegramBadRequest
 
 router = Router()
 
@@ -104,8 +105,48 @@ async def main_menu(message: Message | CallbackQuery):
 @router.message(F.animation)
 async def file_id(message: Message):
     if message.chat.id == -1002127262362:
-        await message.reply(f"ID гифа, на который вы ответили: {message.animation.file_id}")
+        await message.answer_animation(f"{message.animation.file_id}",
+                                       caption=(f"❖ ✨ Редкость: None"
+                                                f"\n❖ 🗺 Вселенная: None"
+                                                f"\n\n   ✊🏻 Сила: 0"
+                                                f"\n   👣 Ловкость: 0"
+                                                f"\n   🧠 Интелект: 0"
+                                                f"\n   ⚜️ Мощь: 000"))
+                                       # caption=f"ID гифа, на который вы ответили: {message.animation.file_id}")
 
+CAPTION = (
+    "❖ ✨ Редкость: None"
+    "\n❖ 🗺 Вселенная: None"
+    "\n\n   ✊🏻 Сила: 0"
+    "\n   👣 Ловкость: 0"
+    "\n   🧠 Интелект: 0"
+    "\n   ⚜️ Мощь: 000"
+)
+
+CHAT_ID = [-1002127262362, -1003227937544]
+
+@router.message()
+async def capture_any_message(message: Message):
+    if message.chat.id not in CHAT_ID or not message.text:
+        return
+    try:
+        file_id, flag = message.text.strip().rsplit(maxsplit=1)
+    except ValueError:
+        return
+
+    flag = flag.lower()
+
+    try:
+        if flag == "p":
+            await message.answer_photo(photo=file_id, caption=CAPTION)
+        elif flag == "g":
+            await message.answer_animation(animation=file_id, caption=CAPTION)
+        else:
+            return
+    except TelegramBadRequest as e:
+        await message.answer(
+            f"Не получилось отправить как '{flag}'. Скорее всего file_id другого типа.\nОшибка: {e}"
+        )
 
 @router.message(F.photo)
 async def file_id(message: Message):

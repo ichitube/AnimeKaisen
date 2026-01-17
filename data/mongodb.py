@@ -788,9 +788,7 @@ async def reset_wins(account):
     return text
 
 
-
 # здесь обработка чатов
-
 
 async def start_chat(chat_id, title, link, universe):
     data = dict({
@@ -954,5 +952,3 @@ async def get_top10_text() -> str:
     ]
 
     return "\n".join(result)
-
-

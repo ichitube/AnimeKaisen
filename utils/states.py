@@ -52,3 +52,7 @@ class ClanSetDescription(StatesGroup):
 
 class ClanMessage(StatesGroup):
     waiting_for_message = State()
+
+
+class TestAvatar(StatesGroup):
+    waiting_for_avatar = State()
