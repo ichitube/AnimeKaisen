@@ -28,19 +28,24 @@ win_text = ("👑 Победа: 💀Соперник мертв"
             "\n<blockquote expandable>── •✧✧• ──────────"
             "\n  + 100🀄️ xp, "
             "\n  + 200💴 ¥</blockquote>")
+
 lose_text = ("💀 Поражение"
              "\n<blockquote expandable>── •✧✧• ──────────"
              "\n  + 55🀄️ xp, "
              "\n  + 100💴 ¥</blockquote>")
+
 draw_text = ("☠️ Ничья"
              "\n<blockquote expandable>── •✧✧• ──────────"
              "\n  + 80🀄️ xp, "
              "\n  + 150💴 ¥</blockquote>")
+
 surrender_text = "🏴‍☠️ Поражение"
+
 surrender_r_text = ("👑 Победа: 🏴‍☠️Соперник сдался"
                     "\n<blockquote expandable>── •✧✧• ──────────"
                     "\n  + 100🀄️ xp, "
                     "\n  + 200💴 ¥</blockquote>")
+
 time_out_text = ("👑 Победа: ⏱️Время вышло"
                  "\n<blockquote expandable>── •✧✧• ──────────"
                  "\n  + 100🀄️ xp, "
@@ -64,14 +69,25 @@ def account_text(character):
     return text
 
 
-async def surrender_f(user_id, r, mes, bot):
+async def surrender_f(user_id, r, mes, bot: Bot):
     await asyncio.sleep(60)
+    # бой уже очищен -> таймер должен молча умереть
+    if user_id not in user_data:
+        return
+
+    if r not in user_data[user_id]:
+        return
+
+    if user_data[user_id][r]:
+        return
+
     if not user_data[user_id][r]:
         user_data[user_id][r] = True  # Обновляем состояние
         account = await mongodb.get_user(user_id)
 
         if account["battle"]["battle"]["status"] == 2:
             rival = await mongodb.get_user(account["battle"]["battle"]["rid"])
+            await bot.send_message(chat_id=user_id, text=f"⏱️ Время вышло")
             await bot.send_animation(chat_id=user_id, animation=lose_animation,
                                      caption=surrender_text, reply_markup=menu_button())
             current_date = datetime.today().date()
@@ -89,11 +105,9 @@ async def surrender_f(user_id, r, mes, bot):
                 {"_id": {"$in": [rival["_id"]]}},
                 {"$set": {"battle.battle.status": 0, "battle.battle.rid": ""}}
             )
+            await bot.send_message(chat_id=rival["_id"], text=f"⏱️ Время вышло")
             await bot.send_animation(chat_id=rival["_id"], animation=win_animation,
                                      caption=time_out_text, reply_markup=menu_button())
-        await bot.edit_message_text(chat_id=user_id, message_id=mes.message_id,
-                                    text=f"✖️ Время вышло ⏱️", reply_markup=None)
-
 
 @router.message(ChatTypeFilter(chat_type=["private"]), Command("search"))
 @router.callback_query(F.data == "search_opponent")
@@ -141,7 +155,7 @@ async def search_opponent(callback: CallbackQuery | Message, bot: Bot):
                 slave = account['inventory']['slaves'][0]
 
             b_character = characters.Character(ident, name, character, strength, agility, intelligence, ability, 1,
-                                               False, rival["_id"], slave, 0)
+                                               True, rival["_id"], slave, 0)
 
             battle_data[account["_id"]] = b_character
 
@@ -195,6 +209,10 @@ async def search_opponent(callback: CallbackQuery | Message, bot: Bot):
             await mongodb.update_user(account["_id"], {"battle.battle.status": 2, "battle.battle.rid": rival["_id"]})
             await mongodb.update_user(rival["_id"], {"battle.battle.status": 2, "battle.battle.rid": account["_id"]})
 
+            # Инициализируем состояние пользователя
+            user_data[rival["_id"]] = {rb_character.b_round: False}
+            user_data[user_id] = {b_character.b_round: True}
+
             if r_avatar_type == 'photo':
                 await bot.send_photo(photo=r_avatar, chat_id=account["_id"], caption=user_text,
                                      reply_markup=reply_builder("🏴‍☠️ Сдаться"))
@@ -209,7 +227,7 @@ async def search_opponent(callback: CallbackQuery | Message, bot: Bot):
                 await bot.send_animation(animation=avatar, chat_id=rival["_id"], caption=rival_text,
                                          reply_markup=reply_builder("🏴‍☠️ Сдаться"))
 
-            await bot.send_message(account["_id"], text="⏳ Ход соперника")
+            await bot.send_message(account["_id"], text="⏳ Ход соперника", reply_markup=abilities_kb(ability, hp=b_character.health, mana=b_character.mana, energy=b_character.energy))
             mes = await bot.send_message(rival["_id"], text=f".               ˗ˋˏ💮 Раунд {rb_character.b_round}ˎˊ˗"
                                                             # f"\n✧•───────────────────────•✧"
                                                             f"\n<blockquote expandable>{account_text(rb_character)}</blockquote>"
@@ -218,14 +236,11 @@ async def search_opponent(callback: CallbackQuery | Message, bot: Bot):
                                                             f"\n<blockquote expandable>{account_text(b_character)}</blockquote>"
                                                             # f"\n✧•───────────────────────•✧"
                                                             f"\n🔸 Ваш ход:",
-                                         reply_markup=abilities_kb(r_ability),
+                                         reply_markup=abilities_kb(r_ability, hp=rb_character.health, mana=rb_character.mana, energy=rb_character.energy),
                                          parse_mode=ParseMode.HTML)
-            # Инициализируем состояние пользователя
-            user_data[rival["_id"]] = {rb_character.b_round: False}
-            user_data[user_id] = {b_character.b_round: True}
 
             # Запускаем таймер
-            await surrender_f(rival["_id"], rb_character.b_round, mes, bot=Bot)
+            await surrender_f(rival["_id"], rb_character.b_round, mes, bot)
 
     elif account["battle"]["battle"]["status"] == 1:
         if isinstance(callback, CallbackQuery):
@@ -293,51 +308,38 @@ async def surrender(message: Message, bot: Bot):
                                      caption=surrender_r_text, reply_markup=menu_button())
 
 
-@router.message(ChatTypeFilter(chat_type=["private"]), F.message.startswith("˹"))
-async def battle(callback: Message, bot: Bot):
-    user_id = callback.from_user.id
+@router.message(ChatTypeFilter(chat_type=["private"]), F.text.startswith("˹"))
+async def battle_message(message: Message, bot: Bot):
+    user_id = message.from_user.id
     account = await mongodb.get_user(user_id)
-    action = callback.text
+    action = message.text.strip()  # <-- теперь это вместо callback.data
 
     # Достаём текущего персонажа боя из памяти
     character = battle_data.get(account["_id"])
+    if action not in character.ability:
+        return
+    # Уже ходил в этом раунде (локальная защита UI)
+    if character.b_turn:
+        await message.answer("⏳ Не ваш ход")
+        return
 
     if not character:
-        # Бой потерян (перезапуск/истёк) — чисто завершаем UI
-        try:
-            await callback.message.edit_text("〰️ Бой был прерван", reply_markup=None)
-        except Exception:
-            pass
+        await message.answer("〰️ Бой был прерван", reply_markup=menu_button())
         return
 
     r_character = battle_data.get(character.rid)
 
     # Нельзя ходить, если не в бою
     if account.get("battle", {}).get("battle", {}).get("status") != 2:
-        try:
-            await callback.answer("Сейчас нельзя ходить.", show_alert=False)
-        except Exception:
-            pass
-        return
-
-    # Уже ходил в этом раунде (локальная защита UI)
-    if character.b_turn:
-        await bot.send_message(user_id, "✖️ Вы уже сделали ход!")
+        await message.answer("〰️ Сейчас нельзя ходить. Вы не в бою")
         return
 
     # --- ИДЕМПОТЕНТНОСТЬ НА РАУНД ---
-    # Один валидный ход на пользователя за раунд. Повторные клики — игнор.
-    rid = account["battle"]["battle"].get("rid")
-    round_ = character.b_round
-    op_id = f"pvp:{rid}:{round_}:{user_id}"
+    turn_no = character.b_round
+    op_id = f"pvp-turn:{user_id}:{turn_no}"
 
     is_first = await mongodb.claim_once(op_id, user_id, ttl_sec=120)
     if not is_first:
-        # Повторный клик в том же раунде
-        try:
-            await callback.answer("Уже засчитано ✅", show_alert=False)
-        except Exception:
-            pass
         return
     # --- /ИДЕМПОТЕНТНОСТЬ ---
 
@@ -353,19 +355,10 @@ async def battle(callback: Message, bot: Bot):
             pass
 
         if not mana:
-            await callback.answer("✖️ Недостаточно маны 🧪", show_alert=True)
+            await message.answer("✖️ Недостаточно маны 🧪")
         elif not energy:
-            await callback.answer("✖️ Недостаточно энергии 🪫", show_alert=True)
+            await message.answer("✖️ Недостаточно энергии 🪫")
         return
-
-    # Убираем клавиатуру с нажатой кнопки (на случай дублей)
-    try:
-        await callback.message.edit_caption(reply_markup=None)
-    except Exception:
-        try:
-            await bot.edit_message_reply_markup(chat_id=callback.from_user.id, message_id=callback.message.message_id)
-        except Exception:
-            pass
 
     battle_data[character.ident] = character
     battle_data[r_character.ident] = r_character
@@ -381,16 +374,16 @@ async def battle(callback: Message, bot: Bot):
                     r_character.ident,
                     text=f".               ˗ˋˏ💮 Раунд {r_character.b_round}ˎˊ˗"
                          f"\n<blockquote expandable>{account_text(r_character)}</blockquote>"
-                         # f"\n✧•──────────────•✧"
                          f"\n➖➖➖➖➖➖➖➖➖➖➖"
                          f"\n<blockquote expandable>{account_text(character)}</blockquote>"
                          f"\n🔸 Ваш ход:",
-                    reply_markup=abilities_kb(r_character.ability),
+                    # reply_markup=abilities_kb(r_character.ability, hp=r_character.health, mana=r_character.mana, energy=r_character.energy),
                     parse_mode=ParseMode.HTML
                 )
             else:
                 await asyncio.sleep(1)
-                await ai(r_character, bot, callback, account)
+                # если ai() у вас требует callback — лучше сделать ai(..., message, ...) или ai(..., None, ...)
+                await ai(r_character, bot, None, account)
                 await asyncio.sleep(1)
                 mes = None
 
@@ -398,7 +391,8 @@ async def battle(callback: Message, bot: Bot):
             user_data[r_character.ident][r_character.b_round] = False
 
             if r_character.ident != character.ident * 10:
-                await surrender_f(r_character.ident, r_character.b_round, mes, bot=Bot)
+                await surrender_f(r_character.ident, r_character.b_round, mes, bot)
+
         else:
             character.b_round += 1
             r_character.b_round += 1
@@ -410,7 +404,6 @@ async def battle(callback: Message, bot: Bot):
                     r_character.ident,
                     text=f".               ˗ˋˏ💮 Раунд {r_character.b_round - 1}ˎˊ˗"
                          f"\n<blockquote expandable>{account_text(r_character)}</blockquote>"
-                         # f"\n✧•──────────────•✧"
                          f"\n➖➖➖➖➖➖➖➖➖➖➖"
                          f"\n<blockquote expandable>{account_text(character)}</blockquote>"
                          f"\n💫 Вы под действием оглушения",
@@ -421,11 +414,10 @@ async def battle(callback: Message, bot: Bot):
                 user_id,
                 text=f".               ˗ˋˏ💮 Раунд {character.b_round}ˎˊ˗"
                      f"\n<blockquote expandable>{account_text(character)}</blockquote>"
-                     # f"\n✧•──────────────•✧"
                      f"\n➖➖➖➖➖➖➖➖➖➖➖"
                      f"\n<blockquote expandable>{account_text(r_character)}</blockquote>"
                      f"\n🔸 Ваш ход:",
-                reply_markup=abilities_kb(character.ability),
+                # reply_markup=abilities_kb(character.ability, hp=character.health, mana=character.mana, energy=character.energy),
                 parse_mode=ParseMode.HTML
             )
 
@@ -435,15 +427,23 @@ async def battle(callback: Message, bot: Bot):
 
             if r_character.ident != character.ident * 10:
                 await bot.send_message(chat_id=r_character.ident, text="⏳ Ход соперника")
-                await surrender_f(character.ident, character.b_round, mes, bot=Bot)
+                await surrender_f(character.ident, character.b_round, mes, bot)
 
-    # ----- дальше оставляю твою исходную логику финалов/раундов -----
+    # ----- ВАША ИСХОДНАЯ ЛОГИКА ФИНАЛОВ/РАУНДОВ -----
     if character.health <= 0 and r_character.health <= 0:
-        await bot.send_animation(chat_id=user_id, animation=draw_animation,
-                                 caption=draw_text, reply_markup=menu_button())
+        await bot.send_animation(
+            chat_id=user_id,
+            animation=draw_animation,
+            caption=draw_text,
+            reply_markup=menu_button()
+        )
         if r_character.ident != character.ident * 10:
-            await bot.send_animation(chat_id=r_character, animation=draw_animation,
-                                     caption=draw_text, reply_markup=menu_button())
+            await bot.send_animation(
+                chat_id=r_character,
+                animation=draw_animation,
+                caption=draw_text,
+                reply_markup=menu_button()
+            )
 
         await mongodb.update_value(account["_id"], {"battle.stats.ties": 1})
         await mongodb.update_value(account["_id"], {"stats.exp": 80})
@@ -455,6 +455,7 @@ async def battle(callback: Message, bot: Bot):
         await mongodb.update_user(account["_id"], {"battle.battle.rid": ""})
         battle_data.pop(account["_id"], None)
         user_data.pop(account["_id"], None)
+
         if r_character.ident != character.ident * 10:
             await mongodb.update_value(character.rid, {"battle.stats.ties": 1})
             await mongodb.update_value(character.rid, {"stats.exp": 80})
@@ -467,11 +468,19 @@ async def battle(callback: Message, bot: Bot):
 
     elif character.health <= 0:
         if character.b_round != r_character.b_round:
-            await bot.send_animation(chat_id=user_id, animation=lose_animation,
-                                     caption=lose_text, reply_markup=menu_button())
+            await bot.send_animation(
+                chat_id=user_id,
+                animation=lose_animation,
+                caption=lose_text,
+                reply_markup=menu_button()
+            )
             if r_character.ident != character.ident * 10:
-                await bot.send_animation(chat_id=character.rid, animation=lose_animation,
-                                         caption=win_text, reply_markup=menu_button())
+                await bot.send_animation(
+                    chat_id=character.rid,
+                    animation=lose_animation,
+                    caption=win_text,
+                    reply_markup=menu_button()
+                )
 
             await mongodb.update_value(account["_id"], {"battle.stats.loses": 1})
             await mongodb.update_value(account["_id"], {"stats.exp": 55})
@@ -481,6 +490,7 @@ async def battle(callback: Message, bot: Bot):
             await mongodb.update_user(account["_id"], {"tasks.last_arena_fight": current_datetime})
             await mongodb.update_user(account["_id"], {"battle.battle.status": 0})
             await mongodb.update_user(account["_id"], {"battle.battle.rid": ""})
+
             if r_character.ident != character.ident * 10:
                 await mongodb.update_value(character.rid, {"battle.stats.wins": 1})
                 await mongodb.update_value(character.rid, {"stats.exp": 100})
@@ -490,21 +500,32 @@ async def battle(callback: Message, bot: Bot):
                 await mongodb.update_user(character.rid, {"battle.battle.rid": ""})
                 battle_data.pop(character.rid, None)
                 user_data.pop(character.rid, None)
+
             battle_data.pop(account["_id"], None)
             user_data.pop(account["_id"], None)
+
         else:
             await send_round_photo()
 
     elif r_character.health <= 0:
         if character.b_round != r_character.b_round:
-            await bot.send_animation(chat_id=user_id, animation=win_animation,
-                                     caption=win_text, reply_markup=menu_button())
+            await bot.send_animation(
+                chat_id=user_id,
+                animation=win_animation,
+                caption=win_text,
+                reply_markup=menu_button()
+            )
             if r_character.ident != character.ident * 10:
-                await bot.send_animation(chat_id=character.rid, animation=lose_animation,
-                                         caption=lose_text, reply_markup=menu_button())
+                await bot.send_animation(
+                    chat_id=character.rid,
+                    animation=lose_animation,
+                    caption=lose_text,
+                    reply_markup=menu_button()
+                )
 
             current_date = datetime.today().date()
             current_datetime = datetime.combine(current_date, datetime.time(datetime.now()))
+
             if r_character.ident != character.ident * 10:
                 await mongodb.update_value(character.rid, {"battle.stats.loses": 1})
                 await mongodb.update_value(character.rid, {"stats.exp": 55})
@@ -514,6 +535,7 @@ async def battle(callback: Message, bot: Bot):
                 await mongodb.update_user(character.rid, {"battle.battle.rid": ""})
                 battle_data.pop(character.rid, None)
                 user_data.pop(character.rid, None)
+
             await mongodb.update_user(account["_id"], {"battle.battle.status": 0})
             await mongodb.update_user(account["_id"], {"battle.battle.rid": ""})
             await mongodb.update_user(account["_id"], {"tasks.last_arena_fight": current_datetime})
@@ -522,10 +544,11 @@ async def battle(callback: Message, bot: Bot):
             await mongodb.update_value(account["_id"], {"account.money": 200})
             battle_data.pop(account["_id"], None)
             user_data.pop(account["_id"], None)
+
         else:
             await asyncio.sleep(1)
             await send_round_photo()
+
     else:
         await asyncio.sleep(1)
         await send_round_photo()
-

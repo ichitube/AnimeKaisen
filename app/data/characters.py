@@ -3,16 +3,17 @@ import inspect
 import random
 
 from app.data import character_photo
+from app.keyboards.builders import abilities_kb
 
 
 async def send_action(bot, self, enemy, chat_id, gif, text, ai=None):
     if self.chat_id == 0:
         if not ai:
-            await bot.send_animation(chat_id=self.ident, animation=gif, caption=text)
+            await bot.send_animation(chat_id=self.ident, animation=gif, caption=text, reply_markup=abilities_kb(self.ability, hp=self.health, mana=self.mana, energy=self.energy))
             if enemy.ident != self.ident * 10:
-                await bot.send_animation(chat_id=enemy.ident, animation=gif, caption=text)
+                await bot.send_animation(chat_id=enemy.ident, animation=gif, caption=text, reply_markup=abilities_kb(enemy.ability, hp=enemy.health, mana=enemy.mana, energy=enemy.energy))
         else:
-            await bot.send_animation(chat_id=enemy.ident, animation=gif, caption=text)
+            await bot.send_animation(chat_id=enemy.ident, animation=gif, caption=text, reply_markup=abilities_kb(enemy.ability, hp=enemy.health, mana=enemy.mana, energy=enemy.energy))
     else:
         await bot.send_animation(chat_id=chat_id, animation=gif, caption=text)
 
@@ -355,7 +356,7 @@ async def turn(self, bot, action, enemy, chat_id, ai=None):
 
 # Ichigo Kurosaki
 
-    elif action == '˹▫️Слэш˼':
+    elif action == '˹▫️Слэш 🧪10˼':
         mana = await calculate_mana(self, 10)
         if not mana:
             return False, True
@@ -369,7 +370,7 @@ async def turn(self, bot, action, enemy, chat_id, ai=None):
 
         await send_action(bot, self, enemy, chat_id, gif, caption, ai)
 
-    elif action == '˹◽️Поступь˼':
+    elif action == '˹◽️Поступь 🧪15˼':
         mana = await calculate_mana(self, 15)
         if not mana:
             return False, True
@@ -386,7 +387,7 @@ async def turn(self, bot, action, enemy, chat_id, ai=None):
 
         await send_action(bot, self, enemy, chat_id, gif, caption, ai)
 
-    elif action == '˹◻️Гецуга Теншоу˼':
+    elif action == '˹◻️Гецуга Теншоу 🧪20 🪫10˼':
         mana = await calculate_mana(self, 20)
         if not mana:
             return False, True
@@ -404,7 +405,7 @@ async def turn(self, bot, action, enemy, chat_id, ai=None):
 
         await send_action(bot, self, enemy, chat_id, gif, caption, ai)
 
-    elif action == '˹◾️Тенса࿖Зангецу˼':
+    elif action == '˹◾️Тенса࿖Зангецу 🧪50 🪫20˼':
         mana = await calculate_mana(self, 50)
         if not mana:
             return False, True
@@ -412,7 +413,7 @@ async def turn(self, bot, action, enemy, chat_id, ai=None):
         if not energy:
             return True, False
 
-        new_skills = ["˹🗡Атака˼", "˹🟥Гецуга◼️Теншоу˼", "˹💀Пустой˼"]
+        new_skills = ["˹🗡Атака˼", "˹🟥Гецуга◼️Теншоу 🧪30˼", "˹💀Пустой˼"]
         skills_change = Passive("Банкай ࿖", change_skills, undo_change_skills, 8, new_skills)
         attack_up = Passive("⇪🗡", increase_attack, decrease_attack, 8, 200, apply_once=True)
 
@@ -425,7 +426,7 @@ async def turn(self, bot, action, enemy, chat_id, ai=None):
 
         await send_action(bot, self, enemy, chat_id, gif, caption, ai)
 
-    elif action == '˹🟥Гецуга◼️Теншоу˼':
+    elif action == '˹🟥Гецуга◼️Теншоу 🧪30˼':
         mana = await calculate_mana(self, 30)
         if not mana:
             return False, True

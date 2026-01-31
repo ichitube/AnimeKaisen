@@ -1,0 +1,6 @@
+mongodb+srv://dire:<password>@animekaisen.8r7or8e.mongodb.net/?retryWrites=true&w=majority
+
+mongodb+srv://dire:<password>@animekaisen.8r7or8e.mongodb.net/
+
+
+185.213.229.96/32

@@ -123,39 +123,28 @@ def inline_builder(
 def abilities_kb(
     abilities: list[str] | tuple[str, ...],
     *,
+    hp: int,
+    mana: int,
+    energy: int,
     cancel_text: str = "🏴‍☠️ Сдаться",
     columns: int = 2,
-    resize_keyboard: bool = True,
-    one_time_keyboard: bool = False,
-    input_field_placeholder: str | None = None,
 ) -> ReplyKeyboardMarkup:
-    """
-    Обычная клавиатура навыков (ReplyKeyboardMarkup), которая появляется снизу экрана.
-    - abilities: список названий навыков (текст кнопки = название)
-    - раскладка: columns колонок
-    - последней строкой добавляется кнопка "Сдаться"
-    """
-    if isinstance(abilities, str):
-        abilities = [abilities]
 
-    builder = ReplyKeyboardBuilder()
+    # 1) Первая строка: статы
+    rows: list[list[KeyboardButton]] = [
+        [KeyboardButton(text=f"❤️ {hp} | 🧪 {mana} | 🪫 {energy}")]
+    ]
 
-    # кнопки навыков
-    for name in abilities:
-        builder.add(KeyboardButton(text=name))
+    # 2) Навыки: раскладка по columns
+    abilities = list(abilities)
+    for i in range(0, len(abilities), columns):
+        chunk = abilities[i:i + columns]
+        rows.append([KeyboardButton(text=name) for name in chunk])
 
-    # раскладка по колонкам
-    builder.adjust(columns)
+    # 3) Последняя строка: Сдаться
+    rows.append([KeyboardButton(text=cancel_text)])
 
-    # отдельной строкой — "Сдаться"
-    builder.row(KeyboardButton(text=cancel_text))
-
-    return builder.as_markup(
-        resize_keyboard=resize_keyboard,
-        one_time_keyboard=one_time_keyboard,
-        input_field_placeholder=input_field_placeholder,
-    )
-
+    return ReplyKeyboardMarkup(keyboard=rows, resize_keyboard=True)
 
 def reply_builder(
     text: str | list[str],

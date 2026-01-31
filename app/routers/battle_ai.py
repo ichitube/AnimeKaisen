@@ -46,7 +46,7 @@ def account_text(character):
             f"\n\n❤️{character.health}"
             f" 🗡{character.attack}"
             f" 🛡{character.defense}"
-            f" 🧪{character.mana}"
+                f" 🧪{character.mana}"
             f" 🪫{character.energy}"
             f"\n🩸К.ур: {character.crit_dmg}"
             f" 🩸К.шн: {character.crit_ch}"
