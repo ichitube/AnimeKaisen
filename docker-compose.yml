@@ -2,10 +2,4 @@ services:
   app:
     build: .
     env_file: .env
-    environment:
-      MONGO_URI: ${MONGO_URI}
-    command: python main.py
     restart: unless-stopped
-    # порты добавьте при необходимости
-    # ports:
-    #   - "8000:8000"
