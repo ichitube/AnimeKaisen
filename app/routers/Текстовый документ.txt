@@ -55,7 +55,7 @@ def account_text(ident):
     d4 = battle_data[ident]["deck"]["d4"]
     d5 = battle_data[ident]["deck"]["d5"]
     d6 = battle_data[ident]["deck"]["d6"]
-    text = (f".                    ˗ˋˏ💮 Раунд {key}ˎˊ˗"
+    text = (f".                    ˗ˋˏ<tg-emoji emoji-id="5215480011322042129">❌</tg-emoji> Раунд {key}ˎˊ˗"
             f"\n✧•───────────────────────•✧"
             f"\n❖  🃏<b> Ваша колода:</b>"
             f"\n<blockquote expandable> • {d1.status}  {d1.name}"

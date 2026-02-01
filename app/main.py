@@ -16,7 +16,7 @@ from app.routers.tokio import tokio, dungeon, store, Pay, home, quests, clans, b
 from app.AI import characters_brain
 from app.handlers import chat_commands, admins
 from app.payments import stars
-from app.chat_handlers import chat_battle
+# from app.chat_handlers import chat_battle
 from app.callbacks import callback
 # from middlewares.AntiFloodMiddleWare import AntiFloodMiddleware, AntiFloodMiddlewareM
 from app.keyboards.builders import menu_button
@@ -66,7 +66,7 @@ async def main() -> None:
         main_menu.router,
         navigation.router,
         battle_k.router,
-        chat_battle.router,
+        # chat_battle.router,
         gacha.router,
         banner.router,
         settings.router,

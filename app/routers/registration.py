@@ -3,7 +3,7 @@ import re
 from aiogram import Router, F
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message, CallbackQuery, InputMediaAnimation
+from aiogram.types import Message, CallbackQuery, InputMediaAnimation, InputMediaPhoto
 from app.data import mongodb
 from app.filters.chat_type import ChatTypeFilter
 from app.keyboards.builders import inline_builder, profile, rm, get_common, menu_card_button, menu_button
@@ -33,21 +33,23 @@ async def fill_profile(message: Message,  state: FSMContext):
         await state.set_state(Form.name)
         await message.answer_animation(
             animation="CgACAgIAAx0CfstymgACHXpm3-JUbweB3b06B_W3bAgiVWRycQACI1wAAvfAAAFLc8MF1Rvq7R02BA",
-            caption='❖ 💮 Добро пожаловать!'
+            caption='❖ <tg-emoji emoji-id="5454380420336466255">❌</tg-emoji> Добро пожаловать!'
                     f'\n── •✧✧• ──────────'
-                    f'\n🎴Здесь вы будете собрать своих персонажей и 🗡 сражаться'
-                    f'\n<blockquote expandable>🔥 Соревнуйтесь, у кого круче карты'
-                    f'\n🃏 Собирайте колоду'
-                    f'\n⚔️ Сражайтесь на арене'
-                    f'\n🏆 Выиграйте платные призы'
-                    f'\n🃏 Обмениваетесь картами'
-                    f'\n🎫 Покупайте билетов'
-                    f'\n💠 Соберите ресурсы в подземелье'
-                    f'\n🐦‍🔥Убейте боссов'
-                    f'\n🔮 Попытайте удачу в «Гаче»</blockquote>'
+                    f'\n<tg-emoji emoji-id="5399959611283356481">❌</tg-emoji>Здесь вы будете собирать своих персонажей и <tg-emoji emoji-id="5399959611283356481">❌</tg-emoji> сражаться'
+                    f'\n<blockquote expandable><tg-emoji emoji-id="5453921696354419743">❌</tg-emoji> Соревнуйтесь, у кого круче карты'
+                    f'\n<tg-emoji emoji-id="5399908355143645853">❌</tg-emoji> Соберите колоду'
+                    f'\n<tg-emoji emoji-id="5104960787579929462">❌</tg-emoji> Поговорите с вашим персонажем'
+                    f'\n<tg-emoji emoji-id="5454014806950429357">❌</tg-emoji> Сражайтесь на арене'
+                    f'\n<tg-emoji emoji-id="5010650336621233058">❌</tg-emoji> Выиграйте платные призы'
+                    f'\n<tg-emoji emoji-id="5213223087612371830">❌</tg-emoji> Обмениваетесь картами'
+                    f'\n<tg-emoji emoji-id="5278306114323099155">❌</tg-emoji> Покупайте билетов'
+                    f'\n<tg-emoji emoji-id="5199633166842736536">❌</tg-emoji> Убейте боссов'
+                    f'\n<tg-emoji emoji-id="6037426946642546018">❌</tg-emoji> Выполняйте квесты'
+                    f'\n<tg-emoji emoji-id="5199498841740553143">❌</tg-emoji> Соберите ресурсы в подземелье'
+                    f'\n<tg-emoji emoji-id="6039404804852158797">❌</tg-emoji> Попытайте удачу в «Гаче»</blockquote>'
                     f'\n── •✧✧• ──────────'
-                    '\n❖ 📜 Пройдите регистрацию')
-        await message.answer("❖ 🪪  Введите никнейм: ", reply_markup=profile(message.from_user.first_name))
+                    '\n❖ <tg-emoji emoji-id="5195198887987520417">❌</tg-emoji> Пройдите регистрацию')
+        await message.answer('❖ <tg-emoji emoji-id="5936017305585586269">❌</tg-emoji>  Введите никнейм: ', reply_markup=profile(message.from_user.first_name))
         if referral_id and referral_id != user_id:
             await state.update_data(referral=referral_id)
         # Если пользователь уже существует и у него есть referral_id, проверьте, существует ли реферал
@@ -61,27 +63,70 @@ async def form_name(message: Message, state: FSMContext):
             await state.update_data(name=f"<a href='https://t.me/{message.from_user.username}'><b>{message.text}</b></a>") # f"{message.from_user.username}"
             await state.set_state(Form.universe)
             media_id = "AgACAgIAAx0CfstymgACCxNl4ie8goZjHQ1rAV5rxcz2a9XLnQACBs8xG7-XGUsGHmby9061bgEAAwIAA3kAAzQE"
-            await message.answer(f"\n\n ❖ ⚙️ Чтобы бот работал корректно и динамично, включите автозагрузку фото "
-                                 f"и видео в настройках телеграм и автовоспроизведение видео в настройках чата телеграм",
+            await message.answer(f'\n\n ❖ <tg-emoji emoji-id="5350396951407895212">❌</tg-emoji> Чтобы бот работал корректно и динамично, включите автозагрузку фото '
+                                 f'и видео в настройках телеграм и автовоспроизведение видео в настройках чата телеграм',
                                  reply_markup=rm())
             pattern = dict(
-                caption="❖ 🗺 Выбирайте вселенную"
-                        "\n── •✧✧• ──────────"
-                        "\n❖ 🗺 Вселенные постепенно будут добавляться и дополняться"
-                        f"\n<blockquote><b>💡 Примечание</b>"
-                        f"\n • 🏟️ <b>Арена</b> - существует в других вселенных, кроме ⭐️ Allstars, "
-                        f"где вы можете применять навыки 🎴 персонажей из аниме"
-                        f"\n • 🃏 <b>Битва</b> - сильно отличается от 🏟️ арены и только для вселенной ⭐️ Allstars, "
-                        f"здесь вы можете сражаться в режиме карточный битвы с 🃏 колодой карт.</blockquote>"
-                        "\n❖ 🔄 Всегда можно сменить вселенную в ⚙️ ️настройки",
-                reply_markup=inline_builder(['⭐️ Allstars', '🗡 Bleach', '🍥 Naruto', '🔥 Jujutsu Kaisen'],
-                                            ['Allstars', 'Bleach', 'Naruto', 'Jujutsu Kaisen'], row_width=1),
+                caption='❖ <tg-emoji emoji-id="5370845694431076232">❌</tg-emoji> Выбирайте вселенную'
+                        '\n── •✧✧• ──────────'
+                        f'\n<blockquote><tg-emoji emoji-id="5947043478771862917">❌</tg-emoji><b> Примечание</b>'
+                        '\n❖ <tg-emoji emoji-id="5370845694431076232">❌</tg-emoji> Вселенные постепенно будут добавляться и дополняться'
+                        # f'\n • 🏟️ <b>Арена</b> - существует в других вселенных, кроме ⭐️ Allstars, '
+                        # f'где вы можете применять навыки 🎴 персонажей из аниме'
+                        # f'\n • 🃏 <b>Битва</b> - сильно отличается от 🏟️ арены и только для вселенной ⭐️ Allstars, '
+                        # f'здесь вы можете сражаться в режиме карточный битвы с 🃏 колодой карт.</blockquote>'
+                       '\n❖ <tg-emoji emoji-id="6005843436479975944">❌</tg-emoji> Всегда можно сменить вселенную в <tg-emoji emoji-id="5350396951407895212">❌</tg-emoji> ️настройки</blockquote>',
+                reply_markup=inline_builder(['🗡 Bleach', '🍥 Naruto', '🔥 Jujutsu Kaisen'], # '⭐️ Allstars',
+                                            ['Bleach', 'Naruto', 'Jujutsu Kaisen'], row_width=1), # 'Allstars',
             )
             await message.answer_photo(media_id, **pattern)
         else:
             await message.answer("✖️ Ник слишком длинный. Введите вручную с помощью клавиатуры: ")
     else:
         await message.answer("✖️ Ник не должен содержать эмодзи. Введите вручную с помощью клавиатуры: ")
+
+
+@router.callback_query(F.data == "reg")
+async def back_to_universe(callback: CallbackQuery, state: FSMContext):
+    await callback.answer()
+
+    data = await state.get_data()
+
+    # если ника нет — возвращаем на ввод ника
+    if "name" not in data:
+        await state.set_state(Form.name)
+        await callback.message.edit_caption(
+            caption='❖ Введите никнейм:',
+            reply_markup=None
+        )
+        return
+
+    # ✅ возвращаем на выбор вселенной
+    await state.set_state(Form.universe)
+
+    media_id = "AgACAgIAAx0CfstymgACCxNl4ie8goZjHQ1rAV5rxcz2a9XLnQACBs8xG7-XGUsGHmby9061bgEAAwIAA3kAAzQE"
+
+    caption = (
+        '❖ <tg-emoji emoji-id="5370845694431076232">❌</tg-emoji> Выбирайте вселенную'
+        '\n── •✧✧• ──────────'
+        f'\n<blockquote><tg-emoji emoji-id="5947043478771862917">❌</tg-emoji><b> Примечание</b>'
+        '\n❖ <tg-emoji emoji-id="5370845694431076232">❌</tg-emoji> Вселенные постепенно будут добавляться и дополняться'
+        '\n❖ <tg-emoji emoji-id="6005843436479975944">❌</tg-emoji> Всегда можно сменить вселенную в <tg-emoji emoji-id="5350396951407895212">❌</tg-emoji> ️настройки</blockquote>'
+    )
+
+    # 1) меняем картинку/гиф
+    await callback.message.edit_media(
+        media=InputMediaPhoto(media=media_id, caption=caption, parse_mode="HTML")
+    )
+
+    # 2) меняем клавиатуру
+    await callback.message.edit_reply_markup(
+        reply_markup=inline_builder(
+            ['🗡 Bleach', '🍥 Naruto', '🔥 Jujutsu Kaisen'],
+            ['Bleach', 'Naruto', 'Jujutsu Kaisen'],
+            row_width=1
+        )
+    )
 
 
 @router.callback_query(F.data.in_(['Allstars']))
@@ -113,17 +158,17 @@ async def get_first_free(callback: CallbackQuery, state: FSMContext):
         if character:
             await mongodb.update_user(callback.from_user.id, {'universe': 'Bleach'})
             await callback.answer("❖ 🗺 Вы успешно сменили вселенную", show_alert=True)
-            await callback.message.answer("❖ 🗺 Вы успешно сменили вселенную", reply_markup=menu_button())
+            await callback.message.answer('❖ <tg-emoji emoji-id="5370845694431076232">❌</tg-emoji> Вы успешно сменили вселенную', reply_markup=menu_button())
             await settings.settings(callback)
             return
     await state.update_data(universe=callback.data)
     media = InputMediaAnimation(media="CgACAgIAAx0CfstymgACCxZl5FxQpuMBOz7tFM8BU88VOEvMXgACtjwAAkLSIEtSvf16OnsuwTQE")
     await callback.message.edit_media(media=media)
-    await callback.message.edit_caption(caption="❖ 🗡 Bleach"
-                                        "\n── •✧✧• ──────────"
-                                        "\n<blockquote expandable>🗺 В этой вселенной находиться популярные 🎴 персонажи "
-                                                "из аниме 🗡 Блич. Вы моежете собрать "
-                                                "🎴 персонажей и сражаться в 🏟️ <b>Арене</b></blockquote>",
+    await callback.message.edit_caption(caption='❖ <tg-emoji emoji-id="5416080380186863674">❌</tg-emoji> Bleach'
+                                        '\n── •✧✧• ──────────'
+                                        '\n<blockquote expandable><tg-emoji emoji-id="5370845694431076232">❌</tg-emoji> В этой вселенной находиться популярные <tg-emoji emoji-id="5415810600406099166">❌</tg-emoji> персонажи '
+                                                'из аниме <tg-emoji emoji-id="5269514187419167010">❌</tg-emoji> Блич. Вы моежете собрать '
+                                                '<tg-emoji emoji-id="5269636228914883132">❌</tg-emoji> персонажей и сражаться в <tg-emoji emoji-id="5269433450623935911">❌</tg-emoji> <b>Арене</b></blockquote>',
                                         reply_markup=get_common())
 
 
@@ -141,11 +186,11 @@ async def get_first_free(callback: CallbackQuery, state: FSMContext):
     await state.update_data(universe=callback.data)
     media = InputMediaAnimation(media="CgACAgIAAxkBAAKu-2bfz0QjhL_TZCnL-Zha1vsprdVLAAKCUQACzJcBS3N7PqOXSE2qNgQ")
     await callback.message.edit_media(media=media)
-    await callback.message.edit_caption(caption="❖ 🍥 Naruto"
-                                        "\n── •✧✧• ──────────"
-                                        "\n<blockquote expandable>🗺 В этой вселенной находиться популярные 🎴 персонажи "
-                                                "из аниме 🍥 Наруто. Вы моежете собрать "
-                                                "🎴 персонажей и сражаться в 🏟️ <b>Арене</b></blockquote>",
+    await callback.message.edit_caption(caption='❖ <tg-emoji emoji-id="5425055431611393158">❌</tg-emoji> Naruto'
+                                        '\n── •✧✧• ──────────'
+                                        '\n<blockquote expandable><tg-emoji emoji-id="5370845694431076232">❌</tg-emoji> В этой вселенной находиться популярные <tg-emoji emoji-id="5426895906702107044">❌</tg-emoji> персонажи '
+                                                'из аниме <tg-emoji emoji-id="5427394299002101953">❌</tg-emoji> Наруто. Вы моежете собрать '
+                                                '<tg-emoji emoji-id="5425013375291629746">❌</tg-emoji> персонажей и сражаться в <tg-emoji emoji-id="5305464601284977538">❌</tg-emoji> <b>Арене</b></blockquote>',
                                         reply_markup=get_common())
 
 
@@ -163,11 +208,11 @@ async def get_first_free(callback: CallbackQuery, state: FSMContext):
     await state.update_data(universe=callback.data)
     media = InputMediaAnimation(media="CgACAgIAAx0CfstymgACQChoOuptItjKNzPwfRbEeo3pNgM08QACqnMAAmIAAdlJUKBfx75OSdU2BA")
     await callback.message.edit_media(media=media)
-    await callback.message.edit_caption(caption="❖ 🔥 Jujutsu Kaisen"
-                                        "\n── •✧✧• ──────────"
-                                        "\n<blockquote expandable>🗺 В этой вселенной находиться популярные 🎴 персонажи "
-                                                "из аниме 🔥 Магической битвы. Вы моежете собрать "
-                                                "🎴 персонажей и сражаться в 🏟️ <b>Арене</b></blockquote>",
+    await callback.message.edit_caption(caption='❖ <tg-emoji emoji-id="5445259279894333861">❌</tg-emoji> Jujutsu Kaisen'
+                                        '\n── •✧✧• ──────────'
+                                        '\n<blockquote expandable><tg-emoji emoji-id="5370845694431076232">❌</tg-emoji> В этой вселенной находиться популярные <tg-emoji emoji-id="5406940114255366351">❌</tg-emoji> персонажи '
+                                                'из аниме <tg-emoji emoji-id="5406989935876002012">❌</tg-emoji> Магической битвы. Вы моежете собрать '
+                                                '<tg-emoji emoji-id="5406911118931151893">❌</tg-emoji> персонажей и сражаться в <tg-emoji emoji-id="5404408505912282371">❌</tg-emoji> <b>Арене</b></blockquote>',
                                         reply_markup=get_common())
 
 

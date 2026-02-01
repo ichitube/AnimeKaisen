@@ -237,14 +237,14 @@ async def ai(character, bot, callback, account):
                 battle_data[r_character.ident].b_turn = False
                 battle_data[character.ident].b_turn = True
                 mes = await bot.send_message(r_character.ident,
-                                             text=f".               ˗ˋˏ💮 Раунд {r_character.b_round}ˎˊ˗"
+                                             text=f'.               ˗ˋˏ<tg-emoji emoji-id="5215480011322042129">❌</tg-emoji> Раунд {r_character.b_round}ˎˊ˗'
                                                   # f"\n✧•───────────────────────•✧"
-                                                  f"\n<blockquote expandable>{account_text(r_character)}</blockquote>"
-                                                  # f"\n✧•──────────────•✧"
-                                                  f"\n➖➖➖➖➖➖➖➖➖➖➖"
-                                                  f"\n<blockquote expandable>{account_text(character)}</blockquote>"
+                                                  f'\n<blockquote expandable>{account_text(r_character)}</blockquote>'
+                                                  # f'\n✧•──────────────•✧'
+                                                  f'\n➖➖➖➖➖➖➖➖➖➖➖'
+                                                  f'\n<blockquote expandable>{account_text(character)}</blockquote>'
                                                   # f"\n✧•───────────────────────•✧"
-                                                  f"\n🔸 Ваш ход:",
+                                                  f'\n🔸 Ваш ход:',
                                              reply_markup=inline_builder(r_character.ability, r_character.ability,
                                                                          row_width=[2, 2]),
                                              parse_mode=ParseMode.HTML)
@@ -258,14 +258,14 @@ async def ai(character, bot, callback, account):
                 battle_data[character.rid].b_turn = True
                 battle_data[character.ident].b_turn = False
                 await bot.send_message(r_character.ident,
-                                       text=f".                    ˗ˋˏ💮 Раунд {r_character.b_round - 1}ˎˊ˗"
+                                       text=f'.                    ˗ˋˏ<tg-emoji emoji-id="5215480011322042129">❌</tg-emoji> Раунд {r_character.b_round - 1}ˎˊ˗'
                                             # f"\n✧•───────────────────────•✧"
-                                            f"\n<blockquote expandable>{account_text(r_character)}</blockquote>"
+                                            f'\n<blockquote expandable>{account_text(r_character)}</blockquote>'
                                             # f"\n✧•──────────────•✧"
-                                            f"\n➖➖➖➖➖➖➖➖➖➖➖"
-                                            f"\n<blockquote expandable>{account_text(character)}</blockquote>"
+                                            f'\n➖➖➖➖➖➖➖➖➖➖➖'
+                                            f'\n<blockquote expandable>{account_text(character)}</blockquote>'
                                             # f"\n✧•───────────────────────•✧"
-                                            f"\n💫 Вы под действием оглушения",
+                                            f'\n💫 Вы под действием оглушения',
                                        parse_mode=ParseMode.HTML)
 
                 user_data[r_character.ident][r_character.b_round - 1] = True  # Обновляем состояние

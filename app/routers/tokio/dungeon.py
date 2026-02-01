@@ -646,8 +646,8 @@ async def inventory(callback: CallbackQuery, callback_data: Pagination, state: F
             )
         await callback.answer()
     except KeyError:
-        await callback.answer("❖ 🔂 Идёт разработка бота связи с чем сессия была остановлена, вызовите "
-                              "🥡 Инвентарь еще раз", show_alert=True)
+        await callback.answer('❖ <tg-emoji emoji-id="5462921117423384478">❌</tg-emoji> Идёт разработка бота связи с чем сессия была остановлена, вызовите '
+                              '🥡 Инвентарь еще раз', show_alert=True)
 
 
 @router.callback_query(F.data == "dg_choice_card")
@@ -658,7 +658,7 @@ async def change_ch(callback: CallbackQuery, state: FSMContext):
         deck = account["deck_dungeon"]
         data = await state.get_data()
         if data.get('character') in deck.values():
-            await callback.answer("❖ 🔂 Этот персонаж уже есть в колоде", show_alert=True)
+            await callback.answer('❖ <tg-emoji emoji-id="5462921117423384478">❌</tg-emoji> Этот персонаж уже есть в колоде', show_alert=True)
             return
         else:
             await mongodb.update_user(user_id, {f"deck_dungeon.{data.get('deck')}": data.get('character')})
@@ -666,5 +666,5 @@ async def change_ch(callback: CallbackQuery, state: FSMContext):
             await callback.answer("🎴 Вы успешно выбрали персонажа", show_alert=True)
             await choose_card(callback)
     except KeyError:
-        await callback.answer("❖ 🔂 Идёт разработка бота связи с чем сессия была остановлена, вызовите "
-                              "🥡 Инвентарь еще раз", show_alert=True)
+        await callback.answer('❖ <tg-emoji emoji-id="5462921117423384478">❌</tg-emoji> Идёт разработка бота связи с чем сессия была остановлена, вызовите '
+                              '🥡 Инвентарь еще раз', show_alert=True)

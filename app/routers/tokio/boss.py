@@ -532,8 +532,8 @@ async def inventory(callback: CallbackQuery, callback_data: Pagination, state: F
             )
         await callback.answer()
     except KeyError:
-        await callback.answer("❖ 🔂 Идёт разработка бота связи с чем сессия была остановлена, вызовите "
-                              "🥡 Инвентарь еще раз", show_alert=True)
+        await callback.answer('❖ <tg-emoji emoji-id="5462921117423384478">❌</tg-emoji>Идёт разработка бота связи с чем сессия была остановлена, вызовите '
+                              '🥡 Инвентарь еще раз', show_alert=True)
 
 
 @router.callback_query(F.data == "bg_choice_card")
@@ -552,8 +552,8 @@ async def change_ch(callback: CallbackQuery, state: FSMContext):
             await callback.answer("🎴 Вы успешно выбрали персонажа", show_alert=True)
             await boss_squad(callback)
     except KeyError:
-        await callback.answer("❖ 🔂 Идёт разработка бота связи с чем сессия была остановлена, вызовите "
-                              "🥡 Инвентарь еще раз", show_alert=True)
+        await callback.answer('❖ <tg-emoji emoji-id="5462921117423384478">❌</tg-emoji> Идёт разработка бота связи с чем сессия была остановлена, вызовите '
+                              '🥡 Инвентарь еще раз', show_alert=True)
 
 
 class Passive:

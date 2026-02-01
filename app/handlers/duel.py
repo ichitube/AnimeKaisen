@@ -403,7 +403,7 @@ async def battle(callback: CallbackQuery):
 
         async def send_round_photo():
             await bot.send_message(user_id,
-                                   text=f".            ˗ˋˏ💮 Раунд {r_character_d['round']}ˎˊ˗"
+                                   text=f".            ˗ˋˏ<tg-emoji emoji-id="5215480011322042129">❌</tg-emoji> Раунд {r_character_d['round']}ˎˊ˗"
                                         f"\n✧•────────────────•✧"
                                         f"\n{account_text}"
                                         f"\n✧•────────────────•✧"
@@ -412,7 +412,7 @@ async def battle(callback: CallbackQuery):
                                         f"\n⏳ Ждём соперника...",
                                    parse_mode=ParseMode.HTML)
             await bot.send_message(r_character_d["id"],
-                                   text=f".            ˗ˋˏ💮 Раунд {r_character_d['round']}ˎˊ˗"
+                                   text=f".            ˗ˋˏ<tg-emoji emoji-id="5215480011322042129">❌</tg-emoji> Раунд {r_character_d['round']}ˎˊ˗"
                                         f"\n✧•────────────────•✧"
                                         f"\n{rival_text}"
                                         f"\n✧•────────────────•✧"

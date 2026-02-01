@@ -1,6 +1,8 @@
-from datetime import datetime, timedelta
+import json
 
+from datetime import datetime, timedelta
 from aiogram import Router, F, Bot
+
 from aiogram.enums import ParseMode
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
@@ -126,6 +128,32 @@ async def capture_any_message(message: Message):
         await message.answer(
             f"Не получилось отправить как '{flag}'. Скорее всего file_id другого типа.\nОшибка: {e}"
         )
+
+# Premium emoji
+
+ADMIN_IDS = {6462809130}
+
+@router.message(Command("prem"))
+async def start(message: Message):
+    await message.answer(
+        '<tg-emoji emoji-id="5199633166842736536">❌</tg-emoji> привет'
+    )
+
+@router.message(F.chat.id.in_(ADMIN_IDS), F.text.regexp(r"^.+\s+e$"))
+async def debug(message: Message):
+    entities = (message.entities or []) + (message.caption_entities or [])
+    found_ids = []
+
+    for ent in entities:
+        if ent.type == "custom_emoji" and ent.custom_emoji_id:
+            found_ids.append(ent.custom_emoji_id)
+
+    if not found_ids:
+        await message.answer("Не нашёл custom emoji в сообщении 🫤")
+        return
+
+    text = "✅ Найдено emoji-id:\n" + "\n".join(f"<code>{eid}</code>" for eid in found_ids)
+    await message.answer(text, parse_mode="HTML")
 
 
 @router.message(F.photo, F.chat.id.in_(CHAT_IDS))

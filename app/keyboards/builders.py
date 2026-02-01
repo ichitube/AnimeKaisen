@@ -167,10 +167,11 @@ def reply_builder(
 
 def get_common():
     builder = InlineKeyboardBuilder()
-    builder.add(InlineKeyboardButton(
-        text='🎴 Схватить карту',
-        callback_data="get_first_free")
-    )
+
+    builder.button(text="🎴 Схватить карту", callback_data="get_first_free")
+    builder.button(text="🔙 Назад", callback_data="reg")
+
+    builder.adjust(1)
     return builder.as_markup()
 
 

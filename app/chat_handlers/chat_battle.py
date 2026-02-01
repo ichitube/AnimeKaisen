@@ -294,7 +294,7 @@ async def duel_battle(callback: CallbackQuery, bot: Bot):
                     duel_battle_data[chat_id][character.ident].b_turn = True
                     if character.b_round != r_character.b_round:
                         await bot.send_message(chat_id,
-                                               text=f".        ˗ˋˏ💮 Раунд {r_character.b_round}ˎˊ˗"
+                                               text=f".        ˗ˋˏ<tg-emoji emoji-id="5215480011322042129">❌</tg-emoji> Раунд {r_character.b_round}ˎˊ˗"
                                                     f"\n✧•────────────────•✧"
                                                     f"\n<blockquote expandable>{duel_text(r_character)}"
                                                     f"\n✧•────────────────•✧"

@@ -147,8 +147,8 @@ async def inventory(callback: CallbackQuery, state: FSMContext):
                                                                f"\n❖ 🔖 1 из {len(invent)}",
                                             reply_markup=builders.pagination_keyboard(universe, invent[0]))
     except KeyError:
-        await callback.message.edit_caption(caption="❖ 〰️ В процессе обновления сессия была остановлена, вызовите "
-                              "🥡 Инвентарь еще раз", reply_markup=None)
+        await callback.message.edit_caption(caption='❖ <tg-emoji emoji-id="5462921117423384478">❌</tg-emoji> В процессе обновления сессия была остановлена, вызовите '
+                              '🥡 Инвентарь еще раз', reply_markup=None)
 
 
 @router.callback_query(builders.Pagination.filter(F.action.in_(["prev", "next"])))
@@ -198,8 +198,8 @@ async def inventory(callback: CallbackQuery, callback_data: builders.Pagination,
             )
         await callback.answer()
     except KeyError:
-        await callback.message.edit_caption(caption="❖ 〰️ В процессе обновления сессия была остановлена, вызовите "
-                                            "🥡 Инвентарь еще раз", reply_markup=None)
+        await callback.message.edit_caption(caption='❖ <tg-emoji emoji-id="5462921117423384478">❌</tg-emoji> В процессе обновления сессия была остановлена, вызовите '
+                                            '🥡 Инвентарь еще раз', reply_markup=None)
 
 
 @router.callback_query(F.data == "change_character")
@@ -210,7 +210,7 @@ async def change_ch(callback: CallbackQuery, state: FSMContext):
         await mongodb.change_char(user_id, data.get('universe'), data.get('character'))
         await callback.answer("🎴 Вы успешно изменили персонажа", show_alert=True)
     except KeyError:
-        await callback.message.edit_caption(caption="❖ 〰️ В процессе обновления сессия была остановлена, вызовите "
+        await callback.message.edit_caption(caption='❖ <tg-emoji emoji-id="5462921117423384478">❌</tg-emoji> В процессе обновления сессия была остановлена, вызовите '
                                             "🥡 Инвентарь еще раз", reply_markup=None)
 
 
@@ -342,8 +342,8 @@ async def inventory(callback: CallbackQuery, state: FSMContext):
                                                                f"\n❖ 🔖 1 из {len(invent)}",
                                             reply_markup=builders.pagination_keyboard_chat(universe, user_id, invent[0]))
     except KeyError:
-        await callback.message.edit_caption(caption="❖ 〰️ В процессе обновления сессия была остановлена, вызовите "
-                                            "🥡 Инвентарь еще раз", reply_markup=None)
+        await callback.message.edit_caption(caption='❖ <tg-emoji emoji-id="5462921117423384478">❌</tg-emoji> В процессе обновления сессия была остановлена, вызовите '
+                                            '🥡 Инвентарь еще раз', reply_markup=None)
 
 
 act = ["prev_", "next_"]
@@ -414,8 +414,8 @@ async def inventory(callback: CallbackQuery, callback_data: builders.Pagination,
             )
         await callback.answer()
     except KeyError:
-        await callback.message.edit_caption(caption="❖ 〰️ В процессе обновления сессия была остановлена, вызовите "
-                                            "🥡 Инвентарь еще раз", reply_markup=None)
+        await callback.message.edit_caption(caption='❖ <tg-emoji emoji-id="5462921117423384478">❌</tg-emoji> В процессе обновления сессия была остановлена, вызовите '
+                                            '🥡 Инвентарь еще раз', reply_markup=None)
 
 
 @router.callback_query(F.data.startswith("change_character_"))
@@ -432,5 +432,5 @@ async def change_ch(callback: CallbackQuery, state: FSMContext):
         await mongodb.change_char(user_id, data.get('universe'), data.get('character'))
         await callback.answer("🎴 Вы успешно изменили персонажа", show_alert=True)
     except KeyError:
-        await callback.message.edit_caption(caption="❖ 〰️ В процессе обновления сессия была остановлена, вызовите "
-                                            "🥡 Инвентарь еще раз", reply_markup=None)
+        await callback.message.edit_caption(caption='❖ <tg-emoji emoji-id="5462921117423384478">❌</tg-emoji> В процессе обновления сессия была остановлена, вызовите '
+                                            '🥡 Инвентарь еще раз', reply_markup=None)
