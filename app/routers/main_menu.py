@@ -68,15 +68,16 @@ async def main_menu(message: Message | CallbackQuery):
                 total_characters += len(characters[outer_key][inner_key])
 
         pattern = dict(
-            caption=f"\n 🪪  〢 Профиль {account['name']} {emoji}"
-                    f"\n₊⊹ . . ݁ ⟡ ݁ . ⊹ ₊ ݁. ݁₊ ⊹ . ݁ ⟡ ݁ . . ⊹₊"
-                    f"\n<blockquote>🎴 <b>{character}</b>"
-                    f"\n🗺 Вселенная: {universe}"
-                    f"\n🎐 <b>{rank}</b>"
-                    f"\n⛩️ <b>{level}</b></blockquote>"
-                    f"\n➖➖➖➖➖➖➖➖➖"
-                    f"\n<i><b>❃💴 {account['account']['money']} ¥ " # ❃ {account['campaign']['power']} ⚜️ Мощи"
-                    f"\n❃🀄️ {account['stats']['exp']} XP ❃ {total_characters} 🃏 Карт</b></i>",
+            caption=f'\n<tg-emoji emoji-id="5936017305585586269">❌</tg-emoji>  〢 Профиль {account['name']} {emoji}'
+                    # f'\n₊⊹ . . ݁ ⟡ ݁ . ⊹ ₊ ݁. ݁₊ ⊹ . ݁ ⟡ ݁ . . ⊹₊'
+                    f'\n➖➖➖➖➖➖➖➖➖'
+                    f'\n<tg-emoji emoji-id="5195198887987520417">❌</tg-emoji> <b>{character}</b>'
+                    f'\n<tg-emoji emoji-id="5370845694431076232">❌</tg-emoji> Вселенная: {universe}'
+                    f'\n<tg-emoji emoji-id="5269717137508805226">❌</tg-emoji> <b>{rank}</b>'
+                    f'\n<tg-emoji emoji-id="5269244149940365620">❌</tg-emoji> <b>{level}</b>'
+                    f'\n➖➖➖➖➖➖➖➖➖'
+                    f'\n<i><b>⟡ {account['account']['money']}<tg-emoji emoji-id="5201873447554145566">❌</tg-emoji>   ⟡ {account['campaign']['power']}<tg-emoji emoji-id="5431420156532235514">❌</tg-emoji>'
+                    f'\n⟡ {account['stats']['exp']}<tg-emoji emoji-id="5380033625909634211">❌</tg-emoji>XP   ⟡ {total_characters}<tg-emoji emoji-id="5399959611283356481">❌</tg-emoji></b></i>',
             parse_mode=ParseMode.HTML,
             reply_markup=inline_builder(
                 [f"🗯 {character}", "🎐 Баннеры", "〽️ Меню", "📜 Квесты", "🪄 Крафт", "🥡 Инвентарь", "⚙️ Настройки", "🎁 Рефераль"],
