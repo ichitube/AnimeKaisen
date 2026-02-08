@@ -174,4 +174,4 @@ async def get_quest_reward(callback: CallbackQuery):
             "tasks.last_get_reward": now
         })
 
-    await callback.answer("❖ ✅ Награды получены", show_alert=True)
+    await callback.answer("❖ ☑️ Награды получены", show_alert=True)

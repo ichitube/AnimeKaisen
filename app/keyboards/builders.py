@@ -362,7 +362,7 @@ def pagination_card(page: int = 0):
         InlineKeyboardButton(text='➡️', callback_data=Pagination(action="d_next", page=page).pack())
     )
     builder.row(
-        InlineKeyboardButton(text='✅ Выбрать', callback_data='d_choice_card')
+        InlineKeyboardButton(text='☑️ Выбрать', callback_data='d_choice_card')
     )
     builder.row(
         InlineKeyboardButton(text='🔙 Назад', callback_data="deck")
@@ -377,7 +377,7 @@ def pagination_dungeon(page: int = 0):
         InlineKeyboardButton(text='➡️', callback_data=Pagination(action="dg_next", page=page).pack())
     )
     builder.row(
-        InlineKeyboardButton(text='✅ Выбрать', callback_data='dg_choice_card')
+        InlineKeyboardButton(text='☑️ Выбрать', callback_data='dg_choice_card')
     )
     builder.row(
         InlineKeyboardButton(text='🔙 Назад', callback_data="dungeon")
@@ -392,7 +392,7 @@ def pagination_boss(page: int = 0):
         InlineKeyboardButton(text='➡️', callback_data=Pagination(action="bg_next", page=page).pack())
     )
     builder.row(
-        InlineKeyboardButton(text='✅ Выбрать', callback_data='bg_choice_card')
+        InlineKeyboardButton(text='☑️ Выбрать', callback_data='bg_choice_card')
     )
     builder.row(
         InlineKeyboardButton(text='🔙 Назад', callback_data="boss_squad")

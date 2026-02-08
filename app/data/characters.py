@@ -320,16 +320,23 @@ class Character:
             self.passive_names.append(passive.name)
 
     def update_passives(self):
+        expired = []
+
         for passive in self.passives:
             passive.apply_effect(self)
-            if passive.duration == 0:
-                if inspect.iscoroutinefunction(passive.undo_effect):
-                    asyncio.create_task(passive.undo_effect(self, passive.points))
-                else:
-                    passive.undo_effect(self, passive.points)
-                if not any(p.name == passive.name for p in self.passives if p is not passive):
-                    self.passive_names.remove(passive.name)
-            self.passives = [p for p in self.passives if p.duration > 0]
+            if passive.duration <= 0:
+                expired.append(passive)
+
+        for passive in expired:
+            if inspect.iscoroutinefunction(passive.undo_effect):
+                asyncio.create_task(passive.undo_effect(self, passive.points))
+            else:
+                passive.undo_effect(self, passive.points)
+
+            if passive.name in self.passive_names:
+                self.passive_names.remove(passive.name)
+
+            self.passives.remove(passive)
 
 
 async def turn(self, bot, action, enemy, chat_id, ai=None):
@@ -4449,22 +4456,29 @@ async def turn(self, bot, action, enemy, chat_id, ai=None):
 
 
 # Slaves effect
+    # Slaves effect
     if self.slave:
-        # Проверяем, добавлена ли пассивка
+        try:
+            result = character_photo.slaves_stats(self.slave)
+        except KeyError:
+            return
+
         if self.slave not in self.passive_names:
             self.passive_names.append(self.slave)
 
-        result = character_photo.slaves_stats(self.slave)
         clas = result[3]
 
         if clas == 'heal':
             if self.health > 0:
-                self.health += result[2]
-        elif clas == 'attack':
-            damage = result[2]
-            calculate_shield(enemy, damage)
+                self.health = min(
+                    self.health + result[2],
+                    self.max_health
+                )
 
-# After action
+        elif clas == 'attack':
+            calculate_shield(enemy, result[2])
+
+    # After action
 
     if enemy.health <= 0:
         enemy.health = 0

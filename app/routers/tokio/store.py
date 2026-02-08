@@ -7,6 +7,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, InputMediaAnimation, LabeledPrice, Message
 from aiogram.enums import ParseMode
 from aiogram.exceptions import TelegramBadRequest
+from aiogram.types import PreCheckoutQuery
 
 from app.keyboards.builders import inline_builder
 from ..slaves import slave_info
@@ -215,6 +216,15 @@ async def inventory(callback: CallbackQuery, state: FSMContext):
     result = character_photo.home_stats(list(homes.keys())[0])
     photo = InputMediaAnimation(media=result[0])
     await state.update_data(home=list(homes.keys())[0])
+
+    await mongodb.update_user(
+        callback.from_user.id,
+        {
+            "ui.store.homes.page": 0,
+            "ui.store.homes.key": list(homes.keys())[0],
+        }
+    )
+
     await callback.message.edit_media(photo, inline_id)
     await callback.message.edit_caption(inline_id, caption=f"❖ ⚜️ Сила: {result[1]}"
                                                            f"\n ── •✧✧• ──────────"
@@ -226,11 +236,31 @@ async def inventory(callback: CallbackQuery, state: FSMContext):
 async def inventory(callback: CallbackQuery, callback_data: builders.Pagination, state: FSMContext):
     inline_id = callback.inline_message_id
     page_num = int(callback_data.page)
+    data = await state.get_data()
+
+    # 🔁 FALLBACK
+    if "home" not in data:
+        account = await mongodb.get_user(callback.from_user.id)
+        ui = account.get("ui", {}).get("store", {}).get("homes", {})
+
+        page_num = ui.get("page", 0)
 
     if callback_data.action == "nextt":
         page_num = (page_num + 1) % len(homes)
     elif callback_data.action == "prevv":
         page_num = (page_num - 1) % len(homes)
+
+    home_key = list(homes.keys())[page_num]
+
+    await state.update_data(home=home_key)
+
+    await mongodb.update_user(
+        callback.from_user.id,
+        {
+            "ui.store.homes.page": page_num,
+            "ui.store.homes.key": home_key,
+        }
+    )
 
     with suppress(TelegramBadRequest):
         result = character_photo.home_stats(list(homes.keys())[page_num])
@@ -252,7 +282,26 @@ async def buy_home(callback: CallbackQuery, state: FSMContext):
     user_id = callback.from_user.id
     account = await mongodb.get_user(user_id)
     data = await state.get_data()
-    result = character_photo.home_stats(data['home'])
+    # 🔁 FALLBACK
+    if "home" not in data:
+        account = await mongodb.get_user(callback.from_user.id)
+        ui = account.get("ui", {}).get("store", {}).get("homes", {})
+        page_num = ui.get("page", 0)
+    home = data.get("home")
+
+    if not home:
+        ui = account.get("ui", {}).get("home", {})
+        home = ui.get("key")
+
+        if not home:
+            await callback.answer(
+                "❖ ✖️ Сессия устарела. Откройте дома заново.",
+                show_alert=True
+            )
+            return
+
+    result = character_photo.home_stats(home)
+
     money = account['account']['money']
     if data.get('home') in account['inventory']['home']:
         await callback.answer(f"❖  🏪  У вас уже есть этот дом", show_alert=True)
@@ -281,6 +330,14 @@ async def store_slaves(callback: CallbackQuery, state: FSMContext):
     photo = InputMediaAnimation(media=result[0])
     info = slave_info(result[3], result[2])
     await state.update_data(slave=list(slaves.keys())[0])
+
+    await mongodb.update_user(
+        callback.from_user.id,
+        {
+            "ui.store.slaves.page": 0,
+            "ui.store.slaves.key": list(slaves.keys())[0],
+        }
+    )
     await callback.message.edit_media(photo, inline_id)
     await callback.message.edit_caption(inline_id,
                                         caption=f"❖ 🔖 {result[1]}"
@@ -297,10 +354,30 @@ async def inventory(callback: CallbackQuery, callback_data: builders.Pagination,
     inline_id = callback.inline_message_id
     page_num = int(callback_data.page)
 
+    data = await state.get_data()
+
+    if "slave" not in data:
+        account = await mongodb.get_user(callback.from_user.id)
+        ui = account.get("ui", {}).get("store", {}).get("slaves", {})
+
+        page_num = ui.get("page", 0)
+
     if callback_data.action == "next_s":
         page_num = (page_num + 1) % len(slaves)
     elif callback_data.action == "prev_s":
         page_num = (page_num - 1) % len(slaves)
+
+    slave_key = list(slaves.keys())[page_num]
+
+    await state.update_data(slave=slave_key)
+
+    await mongodb.update_user(
+        callback.from_user.id,
+        {
+            "ui.store.slaves.page": page_num,
+            "ui.store.slaves.key": slave_key,
+        }
+    )
 
     with suppress(TelegramBadRequest):
         result = character_photo.slaves_stats(list(slaves.keys())[page_num])
@@ -349,14 +426,36 @@ async def buy_keys(callback: CallbackQuery, state: FSMContext):
     user_id = callback.from_user.id
     account = await mongodb.get_user(user_id)
     data = await state.get_data()
-    result = character_photo.slaves_stats(data['slave'])
-    if data.get('slave') in account['inventory']['slaves']:
-        await callback.answer(f"❖  ✖️  У вас уже есть этой рабыньи", show_alert=True)
+
+    slave = data.get("slave")
+
+    # 🔁 FALLBACK В MONGODB
+    if not slave:
+        ui = account.get("ui", {}).get("slave", {})
+        slave = ui.get("key")
+
+        if not slave:
+            await callback.answer(
+                "❖ ✖️ Сессия устарела. Откройте рабынь заново.",
+                show_alert=True
+            )
+            return
+
+    result = character_photo.slaves_stats(slave)
+
+    if slave in account.get("inventory", {}).get("slaves", []):
+        await callback.answer(
+            "❖ ✖️ У вас уже есть эта рабыня",
+            show_alert=True
+        )
         return
+
+    payload = f"buy_slave:{callback.from_user.id}:{slave}"
+
     await callback.message.answer_invoice(
         title=f"❖ 🔖 {result[1]}",
-        description=f"──❀*̥˚──◌──◌──❀*̥˚────",
-        payload="buy_slave",
+        description="──❀*̥˚──◌──◌──❀*̥˚────",
+        payload=payload,
         currency="XTR",
         prices=[LabeledPrice(label="XTR", amount=result[5])],
     )
@@ -372,6 +471,15 @@ async def store_slaves(callback: CallbackQuery, state: FSMContext):
     result = character_photo.card_stats(card)
     photo = InputMediaAnimation(media=result['avatar'])
     await state.update_data(excard=card)
+
+    await mongodb.update_user(
+        callback.from_user.id,
+        {
+            "ui.store.excards.page": 0,
+            "ui.store.excards.key": card,
+        }
+    )
+
     rarity = result['rarity']
     universe = result['universe']
     strength = result['arena']['strength']
@@ -399,10 +507,30 @@ async def inventory(callback: CallbackQuery, callback_data: builders.Pagination,
     inline_id = callback.inline_message_id
     page_num = int(callback_data.page)
 
+    data = await state.get_data()
+
+    if "excard" not in data:
+        account = await mongodb.get_user(callback.from_user.id)
+        ui = account.get("ui", {}).get("store", {}).get("excards", {})
+
+        page_num = ui.get("page", 0)
+
     if callback_data.action == "next_excard":
         page_num = (page_num + 1) % len(cards)
     elif callback_data.action == "prev_excard":
         page_num = (page_num - 1) % len(cards)
+
+    card = list(cards.keys())[page_num]
+
+    await state.update_data(excard=card)
+
+    await mongodb.update_user(
+        callback.from_user.id,
+        {
+            "ui.store.excards.page": page_num,
+            "ui.store.excards.key": card,
+        }
+    )
 
     with suppress(TelegramBadRequest):
         card = list(cards.keys())[page_num]
@@ -437,57 +565,132 @@ async def buy_keys(callback: CallbackQuery, state: FSMContext):
     user_id = callback.from_user.id
     account = await mongodb.get_user(user_id)
     data = await state.get_data()
-    card = data['excard']
+
+    card = data.get("excard")
+
+    # 🔁 FALLBACK В MONGODB
+    if not card:
+        ui = account.get("ui", {}).get("excard", {})
+        card = ui.get("key")
+
+        if not card:
+            await callback.answer(
+                "❖ ✖️ Сессия устарела. Откройте эксклюзивных персонажей заново.",
+                show_alert=True
+            )
+            return
+
     result = character_photo.card_stats(card)
     universe = result['universe']
     rarity = 'divine'
 
-    # безопасная проверка
     characters = account.get('inventory', {}).get('characters', {})
     universe_chars = characters.get(universe, {})
     rarity_chars = universe_chars.get(rarity, [])
 
     if card in rarity_chars:
-        await callback.answer(f"❖  ✖️  У вас уже есть этого персонажа", show_alert=True)
+        await callback.answer(
+            "❖ ✖️ У вас уже есть этот персонаж",
+            show_alert=True
+        )
         return
+
     await callback.message.answer_invoice(
         title=f"🔖 {card}",
-        description=f"──❀*̥˚──◌──◌──❀*̥˚────",
-        payload="buy_excard",
+        description="──❀*̥˚──◌──◌──❀*̥˚────",
+        payload = f"buy_excard:{callback.from_user.id}:{card}",
         currency="XTR",
         prices=[LabeledPrice(label="XTR", amount=170)],
     )
 
+@router.pre_checkout_query()
+async def pre_checkout(pre: PreCheckoutQuery):
+    payload = pre.invoice_payload
+
+    if payload.startswith("buy_slave:"):
+        _, user_id, slave = payload.split(":")
+        account = await mongodb.get_user(int(user_id))
+        if slave in account.get("inventory", {}).get("slaves", []):
+            await pre.answer(ok=False, error_message="Эта рабыня уже у вас есть.")
+            return
+
+    if payload.startswith("buy_excard:"):
+        _, user_id, card = payload.split(":")
+        account = await mongodb.get_user(int(user_id))
+        # можно повторить проверку карты
+
+    if payload.startswith("buy_pass:"):
+        _, user_id = payload.split(":")
+        account = await mongodb.get_user(int(user_id))
+        if account.get("account", {}).get("prime"):
+            await pre.answer(ok=False, error_message="💮Pass уже активен.")
+            return
+
+    await pre.answer(ok=True)
 
 @router.message(F.successful_payment)
 async def successful_payment(message: Message, bot: Bot, state: FSMContext):
     payload = message.successful_payment.invoice_payload
 
-    if payload == "buy_slave":
-        # Обработка покупки рабыни
-        data = await state.get_data()
-        result = character_photo.slaves_stats(data['slave'])
-        await mongodb.push_slave(message.from_user.id, data.get('slave'))
-        current_date = datetime.today().date()
-        current_datetime = datetime.combine(current_date, datetime.time(datetime.now()))
-        # await bot.refund_star_payment(message.from_user.id, message.successful_payment.telegram_payment_charge_id)
-        await mongodb.update_user(message.from_user.id, {"tasks.last_shop_purchase": current_datetime})
+    if payload.startswith("buy_slave:"):
+        _, user_id, slave = payload.split(":")
+        user_id = int(user_id)
+
+        account = await mongodb.get_user(user_id)
+        inventory_slaves = account.get("inventory", {}).get("slaves", [])
+
+        # ⛔ защита от повторной покупки
+        if slave in inventory_slaves:
+            await message.answer(
+                "❖ ⚠️ Эта рабыня у вас уже есть.\n"
+                "Платёж отклонён."
+            )
+            return
+
+        result = character_photo.slaves_stats(slave)
+
+        await mongodb.push_slave(user_id, slave)
+        await mongodb.update_user(
+            user_id,
+            {"tasks.last_shop_purchase": datetime.now()}
+        )
+
         await message.answer(f"❖ 🔖 Вы успешно приобрели {result[1]}")
 
-    if payload == "buy_excard":
-        # Обработка покупки рабыни
-        data = await state.get_data()
-        card = data['excard']
+    if payload.startswith("buy_excard:"):
+        _, user_id, card = payload.split(":")
+        user_id = int(user_id)
+
+        account = await mongodb.get_user(user_id)
         result = character_photo.card_stats(card)
-        universe = result['universe']
-        rarity = 'divine'
-        await mongodb.push(universe, rarity, card, message.from_user.id)
-        current_date = datetime.today().date()
-        current_datetime = datetime.combine(current_date, datetime.time(datetime.now()))
-        # await bot.refund_star_payment(message.from_user.id, message.successful_payment.telegram_payment_charge_id)
-        await mongodb.update_user(message.from_user.id, {"tasks.last_shop_purchase": current_datetime})
-        await message.answer(f"❖ 🔖 Вы успешно приобрели "
-                             f"\n<blockquote>{card}</blockquote>")
+
+        universe = result["universe"]
+        rarity = "divine"
+
+        inventory_cards = (
+            account.get("inventory", {})
+            .get("characters", {})
+            .get(universe, {})
+            .get(rarity, [])
+        )
+
+        if card in inventory_cards:
+            await message.answer(
+                "❖ ⚠️ Этот персонаж уже у вас есть.\n"
+                "Покупка отменена."
+            )
+            return
+
+        await mongodb.push(universe, rarity, card, user_id)
+        await mongodb.update_user(
+            user_id,
+            {"tasks.last_shop_purchase": datetime.now()}
+        )
+
+        await message.answer(
+            f"❖ 🔖 Вы успешно приобрели\n<blockquote>{card}</blockquote>"
+        )
+
 
     elif payload == "buy_ticket":
         # Обработка покупки билета
@@ -495,20 +698,34 @@ async def successful_payment(message: Message, bot: Bot, state: FSMContext):
         await mongodb.update_value(message.from_user.id, {'inventory.items.tickets.keys': 1})
         await message.answer("❖ Вы успешно приобрели 🧧 священный билет")
 
-    elif payload == "buy_pass":
-        user_id = message.from_user.id
-        current_date = datetime.today().date()
-        current_datetime = datetime.combine(current_date, datetime.time(datetime.now()))
-        # Устанавливаем дату окончания пасса на месяц вперёд
-        expiration_date = current_datetime + timedelta(days=30)
-        # Обработка покупки пасса
-        # await bot.refund_star_payment(message.from_user.id, message.successful_payment.telegram_payment_charge_id)
-        await mongodb.update_value(user_id, {'account.prime': True})
-        await mongodb.update_user(user_id, {"pass_purchase": current_datetime})
-        await mongodb.update_user(user_id, {"pass_expiration": expiration_date})
+    if payload.startswith("buy_pass:"):
+        _, user_id = payload.split(":")
+        user_id = int(user_id)
+        account = await mongodb.get_user(user_id)
 
-        await message.answer(f"❖ ❇️ Вы успешно приобрели 💮Pass"
-                             f"\n<blockquote>⏱️ Будет действовать до {expiration_date.strftime("%Y-%m-%d")}</blockquote>")
+        if account.get("account", {}).get("prime"):
+            await message.answer(
+                "❖ ⚠️ У вас уже активирован 💮Pass.\n"
+                "Повторная покупка невозможна."
+            )
+            return
+
+        now = datetime.now()
+        expiration = now + timedelta(days=30)
+
+        await mongodb.update_user(
+            user_id,
+            {
+                "account.prime": True,
+                "pass_purchase": now,
+                "pass_expiration": expiration,
+            }
+        )
+
+        await message.answer(
+            f"❖ ❇️ Вы успешно приобрели 💮Pass\n"
+            f"<blockquote>⏱️ Действует до {expiration:%Y-%m-%d}</blockquote>"
+        )
 
 # @router.pre_checkout_query()
 # async def process_pre_checkout_query(event: PreCheckoutQuery):

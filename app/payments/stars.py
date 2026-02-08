@@ -85,7 +85,7 @@ async def buy_pass(message: Message | CallbackQuery):
             title="🌟 Покупка 💮Pass",
             description="❖ 💮Pass даёт вам доступ к уникальным возможностям и удвоенным наградам",
                         # "\n\n\n\n • Цена: 150 🌟",
-            payload="buy_pass",
+            payload = f"buy_pass:{message.from_user.id}",
             currency="XTR",
             prices=[LabeledPrice(label="XTR", amount=150)],
         )
@@ -94,7 +94,7 @@ async def buy_pass(message: Message | CallbackQuery):
             title="🌟 Покупка 💮Pass",
             description="❖ 💮Pass даёт вам доступ к уникальным возможностям и удвоенным наградам",
                        # f"\n\n • Цена: 150 🌟",
-            payload="buy_pass",
+            payload = f"buy_pass:{message.from_user.id}",
             currency="XTR",
             prices=[LabeledPrice(label="XTR", amount=150)]
         )

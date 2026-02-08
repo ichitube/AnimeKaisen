@@ -350,8 +350,8 @@ def deck_text(character, universe):
     attack = strength * 5 + agility * 5 + intelligence * 5
     defense = (strength + agility + (intelligence // 2)) // 4
 
-    text = (f"\n╭┈๋જ‌›<b>{character}</b> ♥️{hp}"
-            f"\n🎴┄⚔️{attack} 🛡️{defense} ✊{strength} 👣{agility} 🧠{intelligence}"
+    text = (f"╭┈๋જ‌›<b>{character}</b> ♥️{hp}\n"
+            f"🎴┄⚔️{attack} 🛡️{defense} ✊{strength} 👣{agility} 🧠{intelligence}\n"
         # f" • 🎴 {character} "
         #     f"\n ┗➤ • ♥️{hp} • ⚔️{attack} • 🛡️{defense}"
         #     f"\n     ┗➤ • ✊{strength} • 👣{agility} • 🧠{intelligence} ✧ {clas}"
@@ -411,15 +411,15 @@ async def choose_card(callback: CallbackQuery):
 
     for card in cards:
         if card == "empty":
-            messages.append("\n╭┈๋જ‌›<b><i> Пустое место </i></b> "
-                "\n🎴┄ <i> empty </i>")
+            messages.append("╭┈๋જ‌›<b><i> Пустое место </i></b>\n"
+                "🎴┄ <i> empty </i>\n")
             icons.append("ℹ️")
             powers.append(0)
         else:
             p = get_stats(card_universes[cards.index(card)], card, 'arena')
             power = p.get('power')
             messages.append(deck_text(card, card_universes[cards.index(card)]))
-            icons.append("✅")
+            icons.append("☑️")
             powers.append(power)
 
     # Доступ к результатам
@@ -432,7 +432,7 @@ async def choose_card(callback: CallbackQuery):
     if "empty" in deck_data.values():
         msg = "❃ ℹ️ Есть пустые места в отряде"
     else:
-        msg = "❃ ✅ Ваш отряд готов к походу"
+        msg = "❃ ☑️ Ваш отряд готов к походу"
 
     pattern = dict(
         caption=f"<b>❖ 🕯 Авантюристы 🗡</b>"
@@ -444,7 +444,7 @@ async def choose_card(callback: CallbackQuery):
                 f"{f4_msg}"
                 f"{f5_msg}"
                 f"{f6_msg}"
-                f"\n╰──⚜️ Сила отряда: {power}🗡──╯</blockquote>"
+                f"╰──⚜️ Сила отряда: {power}🗡──╯</blockquote>"
                 f"\n{msg}",
         reply_markup=inline_builder(
             [f"{f1_icon}", f"{f2_icon}", f"{f3_icon}",
@@ -489,19 +489,15 @@ async def get_inventory(user_id, rarity):
 
 @router.callback_query(F.data.in_(['dg1', 'dg2', 'dg3', 'dg4', 'dg5', 'dg6']))
 async def inventory(callback: CallbackQuery | Message, state: FSMContext):
-    await state.update_data(deck=callback.data)
-    if callback.data == "dg1":
-        await state.update_data(card_universe="dg1_universe")
-    elif callback.data == "dg2":
-        await state.update_data(card_universe="dg2_universe")
-    elif callback.data == "dg3":
-        await state.update_data(card_universe="dg3_universe")
-    elif callback.data == "dg4":
-        await state.update_data(card_universe="dg4_universe")
-    elif callback.data == "dg5":
-        await state.update_data(card_universe="dg5_universe")
-    elif callback.data == "dg6":
-        await state.update_data(card_universe="dg6_universe")
+    slot = callback.data
+
+    await mongodb.update_user(
+        callback.from_user.id,
+        {
+            "ui.dungeon.deck_slot": slot,
+        }
+    )
+
     media_id = "CgACAgIAAxkBAAIVCmXMvbzs7hde-fvY9_4JCwU8W6HpAAKgOwACeyZoSuedvZenkxDNNAQ"
     user_id = callback.from_user.id
     account = await mongodb.get_user(user_id)
@@ -562,15 +558,23 @@ async def inventory(callback: CallbackQuery | Message, state: FSMContext):
 @router.callback_query(F.data.in_(['dg_soccer', 'dg_halloween', 'dg_common', 'dg_rare',
                                    'dg_epic', 'dg_legendary', 'dg_mythical', 'dg_divine']))
 async def inventory(callback: CallbackQuery, state: FSMContext):
-    await state.update_data(rarity=callback.data)
+
     inline_id = callback.inline_message_id
     user_id = callback.from_user.id
     invent, universe = await get_inventory(user_id, callback.data)
     if invent == []:
         await callback.answer("❖ ✖️ У вас нет карт данной редкости", show_alert=True)
         return
-    await state.update_data(character=invent[0])
-    await state.update_data(universe=universe)
+    await mongodb.update_user(
+        callback.from_user.id,
+        {
+            "ui.dungeon.rarity": callback.data,
+            "ui.dungeon.page": 0,
+            "ui.dungeon.character": invent[0],
+            "ui.dungeon.universe": universe
+        }
+    )
+
     avatar = character_photo.get_stats(universe, invent[0], 'avatar')
     avatar_type = character_photo.get_stats(universe, invent[0], 'type')
     if avatar_type == 'photo':
@@ -603,9 +607,20 @@ async def inventory(callback: CallbackQuery, state: FSMContext):
 async def inventory(callback: CallbackQuery, callback_data: Pagination, state: FSMContext):
     try:
         inline_id = callback.inline_message_id
-        page_num = int(callback_data.page)
-        user_data = await state.get_data()
-        invent, universe = await get_inventory(callback.from_user.id, user_data['rarity'])
+        account = await mongodb.get_user(callback.from_user.id)
+        ui = account.get("ui", {}).get("dungeon", {})
+
+        rarity = ui.get("rarity")
+        page_num = ui.get("page", 0)
+
+        if not rarity:
+            await callback.answer(
+                "❖ ✖️ Сессия устарела. Откройте инвентарь заново.",
+                show_alert=True
+            )
+            return
+
+        invent, universe = await get_inventory(callback.from_user.id, rarity)
 
         if callback_data.action == "dg_next":
             page_num = (page_num + 1) % len(invent)
@@ -644,6 +659,16 @@ async def inventory(callback: CallbackQuery, callback_data: Pagination, state: F
                         f"\n❖ 🔖 {page_num + 1} из {len(invent)}",
                 reply_markup=pagination_dungeon(page=page_num)
             )
+
+        await mongodb.update_user(
+            callback.from_user.id,
+            {
+                "ui.dungeon.page": page_num,
+                "ui.dungeon.character": invent[page_num],
+                "ui.dungeon.universe": universe
+            }
+        )
+
         await callback.answer()
     except KeyError:
         await callback.answer('❖ <tg-emoji emoji-id="5462921117423384478">❌</tg-emoji> Идёт разработка бота связи с чем сессия была остановлена, вызовите '
@@ -656,13 +681,36 @@ async def change_ch(callback: CallbackQuery, state: FSMContext):
         user_id = callback.from_user.id
         account = await mongodb.get_user(user_id)
         deck = account["deck_dungeon"]
-        data = await state.get_data()
-        if data.get('character') in deck.values():
-            await callback.answer('❖ <tg-emoji emoji-id="5462921117423384478">❌</tg-emoji> Этот персонаж уже есть в колоде', show_alert=True)
+        account = await mongodb.get_user(user_id)
+        ui = account.get("ui", {}).get("dungeon", {})
+
+        character = ui.get("character")
+        deck_slot = ui.get("deck_slot")
+        universe = ui.get("universe")
+
+        if not all([character, deck_slot, universe]):
+            await callback.answer(
+                "❖ ✖️ Сессия устарела. Откройте инвентарь заново.",
+                show_alert=True
+            )
             return
+
+        if character in deck.values():
+            await callback.answer(
+                "❖ ❌ Этот персонаж уже есть в отряде",
+                show_alert=True
+            )
+            return
+
         else:
-            await mongodb.update_user(user_id, {f"deck_dungeon.{data.get('deck')}": data.get('character')})
-            await mongodb.update_user(user_id, {f"deck_dungeon.{data.get('card_universe')}": data.get('universe')})
+            await mongodb.update_user(
+                user_id,
+                {
+                    f"deck_dungeon.{deck_slot}": character,
+                    f"deck_dungeon.{deck_slot}_universe": universe
+                }
+            )
+
             await callback.answer("🎴 Вы успешно выбрали персонажа", show_alert=True)
             await choose_card(callback)
     except KeyError:

@@ -1,6 +1,8 @@
 import re
 import os
 import asyncio
+import random
+
 from motor.motor_asyncio import AsyncIOMotorClient
 from app.recycling import profile
 from typing import Optional, Callable, List, Tuple, Dict
@@ -49,70 +51,174 @@ emoji_pattern = re.compile(
     "]+", flags=re.UNICODE)
 
 
+from datetime import datetime
+
+
+
 async def input_user(user_id: int, name, universe, character, power):
-    data = dict({
-        '_id': user_id,
-        'name': name,
-        'universe': universe,
-        'character': {
+    data = {
+        "_id": user_id,
+
+        # --- БАЗОВАЯ ИНФОРМАЦИЯ ---
+        "name": name,
+        "universe": universe,
+        "created_at": datetime.utcnow(),
+        "schema_version": 1,
+
+        # --- АКТИВНЫЙ ПЕРСОНАЖ ---
+        "character": {
             universe: character
         },
-        'clan': '',
-        'account': {
-            'prime': False,
-            'money': 1000,
-            'fragments': 0,
-            'clan': '',
-            'referrals': [],
-            'awards': [],
-            'clan_coins': 0
+
+        # --- КЛАН ---
+        "clan": "",
+
+        # --- АККАУНТ ---
+        "account": {
+            "prime": False,
+            "money": 1000,
+            "fragments": 0,
+            "referrals": [],
+            "awards": [],
+            "clan_coins": 0
         },
-        'stats': {
-            'rank': 1,
-            'exp': 0,
-            'pts': 100,
+
+        # --- СТАТИСТИКА ---
+        "stats": {
+            "rank": 1,
+            "exp": 0,
+            "pts": 100
         },
-        'campaign': {
-            'power': power,
-            'level': 1,
-            'stage': 1,
-            'count': 0,
-            'nephritis': 0,
-            'gold': 0,
-            'silver': 0,
-            'bosses': []
+
+        # --- КАМПАНИЯ ---
+        "campaign": {
+            "power": power,
+            "level": 1,
+            "stage": 1,
+            "count": 0,
+            "nephritis": 0,
+            "gold": 0,
+            "silver": 0,
+            "bosses": []
         },
-        'battle': {
-            'stats': {
-                'wins': 0,
-                'loses': 0,
-                'ties': 0
+
+        # --- БОИ (ПОКА НЕ МЕНЯЕМ ЛОГИКУ) ---
+        "battle": {
+            "stats": {
+                "wins": 0,
+                "loses": 0,
+                "ties": 0
             },
-            'battle': {
-                'status': 0,
-                'turn': False,
-                'rid': "",
-                'round': 1
+            "battle": {
+                "status": 0,
+                "rid": "",
+                "round": 1
             }
         },
-        'inventory': {
-            'characters': {
-            },
-            'items': {
-                'tickets': {
-                    'keys': 0,
-                    'golden': 1,
-                    'common': 3,
+
+        # --- ИНВЕНТАРЬ (ВАЖНО!) ---
+        "inventory": {
+            "characters": {
+                universe: {
+                    "common": [],
+                    "rare": [],
+                    "epic": [],
+                    "legendary": [],
+                    "mythical": [],
+                    "divine": []
                 }
             },
-            'home': [],
-            'slaves': []
+            "items": {
+                "tickets": {
+                    "keys": 0,
+                    "golden": 1,
+                    "common": 3
+                }
+            },
+            "home": [],
+            "slaves": []
         },
-    })
 
-    full_data = data
+        # --- UI / СОСТОЯНИЯ (ПОКА ПУСТО) ---
+        "ui": {}
+    }
 
-    await db.users.insert_one(full_data)
+    await db.users.insert_one(data)
+
+
+# Защита от подставных битв
+async def add_recent_opponent(user_id: int, opponent_id: int, limit: int = 6):
+    await db.users.update_one(
+        {"_id": user_id},
+        {
+            "$pull": {"battle.recent_opponents": opponent_id}
+        }
+    )
+    await db.users.update_one(
+        {"_id": user_id},
+        {
+            "$push": {
+                "battle.recent_opponents": {
+                    "$each": [opponent_id],
+                    "$position": 0,
+                    "$slice": limit
+                }
+            }
+        }
+    )
+
+
+async def try_lock_search(user_id: int) -> bool:
+    res = await db.users.update_one(
+        {
+            "_id": user_id,
+            "battle.battle.status": 0
+        },
+        {
+            "$set": {
+                "battle.battle.status": 1,
+                "battle.battle.search_started_at": datetime.utcnow()
+            }
+        }
+    )
+    return res.modified_count == 1
+
+
+async def find_opponent_safe(account):
+    user_id = account["_id"]
+    recent = account.get("battle", {}).get("recent_opponents", [])
+    now = datetime.utcnow()
+    timeout = now - timedelta(minutes=5)
+
+    candidates = await db.users.find({
+        "_id": {
+            "$ne": user_id,
+            "$nin": recent
+        },
+        "battle.battle.status": 1,  # 🔥 ТОЛЬКО ИЩУЩИЕ БОЙ
+        "battle.battle.search_started_at": {"$gte": timeout}
+    }).to_list(length=50)
+
+    if not candidates:
+        return None
+
+    return random.choice(candidates)
+
+
+
+# Универсальные функции для State
+async def ui_get(user_id: int, section: str) -> dict:
+    user = await get_user(user_id)
+    return (user.get("ui", {}) or {}).get(section, {})
+
+
+async def ui_set(user_id: int, section: str, **data):
+    updates = {f"ui.{section}.{k}": v for k, v in data.items()}
+    await update_value(user_id, updates)
+
+
+async def ui_clear(user_id: int, section: str):
+    await update_value(user_id, {f"ui.{section}": None})
 
 
 # --- индексы для авто-очистки одноразовых операций ---
@@ -383,15 +489,15 @@ async def send_rating(var, account, icon):
 
     top_accounts_cursor = sorted_cursor.limit(10)
 
-    rating_table = "\n\n"
+    rating_table = ""
     index = 1
     async for account in top_accounts_cursor:
         level = await profile.level(account['campaign']['level'])
-        rating_table += (f"╭┈๋જ‌›{account['name']} "
-                         f"\n{index}┄{account['campaign']['power']} {icon} ⛩️ {level} \n")
+        rating_table += (f"╭┈๋જ‌›{account['name']} \n"
+                         f"{index}┄{account['campaign']['power']} {icon} ⛩️ {level} \n")
         index += 1
 
-    rating_table += f"╰── Вы: {user_position}. {user_name} - {user_power} {icon} ──╯"
+    rating_table += f"╰─ Вы: {user_position}. {user_name} - {user_power} {icon}"
     return rating_table
 
 
@@ -682,14 +788,14 @@ async def wins_rat(account):
     ]
     winners = db.users.aggregate(pipeline)
 
-    text = ("🏆 <b>Рейтинг побед</b>"
+    text = ('<tg-emoji emoji-id="5316979941181496594">🏆</tg-emoji> <b>Рейтинг побед</b>'
             "\n───── ⋆ ⋆⋅☆⋅⋆ ⋆ ─────"
             "\n<blockquote>")
     index = 1
-    rewards = {1: "🌟150", 2: "🌟100", 3: "🌟50"}
+    rewards = {1: '<tg-emoji emoji-id="5346309121794659890">🌟</tg-emoji>150', 2: '<tg-emoji emoji-id="5346309121794659890">🌟</tg-emoji>100', 3: '<tg-emoji emoji-id="5346309121794659890">🌟</tg-emoji>50'}
 
     async for acc in winners:
-        reward = rewards.get(index, "🌟25")
+        reward = rewards.get(index, '<tg-emoji emoji-id="5346309121794659890">🌟</tg-emoji>25')
 
         # if index == 1:
         #     place = "🥇"
@@ -701,7 +807,7 @@ async def wins_rat(account):
         #     place = f"{index}."
         place = f"{index}."
 
-        text += f"{place}.{reward} ꫂ {acc['name']} ➤ {acc.get('wins_count', 0)} Побед 🏆\n"
+        text += f'{place}.{reward} ꫂ {acc['name']} ➤ {acc.get('wins_count', 0)} Побед <tg-emoji emoji-id="5447112111605964162">🏆</tg-emoji>\n'
         index += 1
 
     # позиция текущего пользователя
@@ -712,7 +818,7 @@ async def wins_rat(account):
     user_position = higher_pts_count + 1
     user_name = account['name']
 
-    text += f"╰ Вы: {user_position}. {user_name} ➤ {user_wins} Побед 🏆 ╯"
+    text += f'╰ Вы: {user_position}. {user_name} ➤ {user_wins} Побед <tg-emoji emoji-id="5447112111605964162">🏆</tg-emoji> ╯'
     text += "</blockquote>"
 
     # добавляем таймер
@@ -732,7 +838,8 @@ async def wins_rat(account):
             else:
                 left_text = f"{minutes}м"
 
-            text += f"\n♻️ До сброса: ⏱️ {left_text}"
+            text += (f''
+                     f'\n<tg-emoji emoji-id="5325872701032635449">♻️</tg-emoji> До сброса: <tg-emoji emoji-id="5316591603123502631">⏱️</tg-emoji> {left_text}')
 
     return text
 
@@ -884,7 +991,7 @@ async def add_promo_code(promo_code, reward):
 
 async def give_to_all(data, message):
     await db.users.update_many({}, {"$inc": data})
-    await message.answer("❖ ✅ Всем выдано")
+    await message.answer("❖ ☑️ Всем выдано")
 
 
 async def remove_emojis():

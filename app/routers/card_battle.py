@@ -180,42 +180,42 @@ async def choose_card(callback: CallbackQuery):
         f1_icon = "ℹ️"
     else:
         f1_msg = deck_text(first, universe)
-        f1_icon = "✅"
+        f1_icon = "☑️"
     if second == "empty":
         f2_msg = "\n╭┈๋જ‌›<b><i> Пустое место </i></b> \n🎴┄ <i> empty </i>"
         f2_icon = "ℹ️"
     else:
         f2_msg = deck_text(second, universe)
-        f2_icon = "✅"
+        f2_icon = "☑️"
     if third == "empty":
         f3_msg = "\n╭┈๋જ‌›<b><i> Пустое место </i></b> \n🎴┄ <i> empty </i>"
         f3_icon = "ℹ️"
     else:
         f3_msg = deck_text(third, universe)
-        f3_icon = "✅"
+        f3_icon = "☑️"
     if fourth == "empty":
         f4_msg = "\n╭┈๋જ‌›<b><i> Пустое место </i></b> \n🎴┄ <i> empty </i>"
         f4_icon = "ℹ️"
     else:
         f4_msg = deck_text(fourth, universe)
-        f4_icon = "✅"
+        f4_icon = "☑️"
     if fifth == "empty":
         f5_msg = "\n╭┈๋જ‌›<b><i> Пустое место </i></b> \n🎴┄ <i> empty </i>"
         f5_icon = "ℹ️"
     else:
         f5_msg = deck_text(fifth, universe)
-        f5_icon = "✅"
+        f5_icon = "☑️"
     if sixth == "empty":
         f6_msg = "\n╭┈๋જ‌›<b><i> Пустое место </i></b> \n🎴┄ <i> empty </i>"
         f6_icon = "ℹ️"
     else:
         f6_msg = deck_text(sixth, universe)
-        f6_icon = "✅"
+        f6_icon = "☑️"
 
     if "empty" in deck_data.values():
         msg = "❃ ℹ️ Есть пустые слоты в колоде"
     else:
-        msg = "❃ ✅ Ваша колода готова к битве"
+        msg = "❃ ☑️ Ваша колода готова к битве"
 
     pattern = dict(
         caption=f"❖  🃏<b> Ваша колода:</b>"

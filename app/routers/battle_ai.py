@@ -9,7 +9,7 @@ from app.data import characters, character_photo
 from app.data import mongodb
 from app.routers.arena import arena
 from app.filters.chat_type import ChatTypeFilter
-from app.keyboards.builders import reply_builder, inline_builder, menu_card_button
+from app.keyboards.builders import reply_builder, abilities_kb, menu_card_button
 from app.routers import gacha
 
 router = Router()
@@ -18,43 +18,48 @@ battle_data = {}
 
 user_data = {}
 
-win_text = ("👑 Победа: 💀Соперник мертв"
-            "\n<blockquote expandable>── •✧✧• ──────────"
-            "\n  + 10🀄️ xp, "
-            "\n  + 20💴 ¥</blockquote>")
-lose_text = ("💀 Поражение"
-             "\n<blockquote expandable>── •✧✧• ──────────"
-             "\n  + 5🀄️ xp, "
-             "\n  + 10💴 ¥</blockquote>")
-draw_text = ("☠️ Ничья"
-             "\n<blockquote expandable>── •✧✧• ──────────"
-             "\n  + 8🀄️ xp, "
-             "\n  + 15💴 ¥</blockquote>")
-surrender_text = "🏴‍☠️ Поражение"
-surrender_r_text = ("👑 Победа: 🏴‍☠️Соперник сдался"
-                    "\n<blockquote expandable>── •✧✧• ──────────"
-                    "\n  + 100🀄️ xp, "
-                    "\n  + 200💴 ¥</blockquote>")
-time_out_text = ("👑 Победа: ⏱️Время вышло"
-                 "\n<blockquote expandable>── •✧✧• ──────────"
-                 "\n  + 100🀄️ xp, "
-                 "\n  + 200💴 ¥</blockquote>")
+win_text = ('<tg-emoji emoji-id="5465465194056525619">❌</tg-emoji>Победа: <tg-emoji emoji-id="5463186335948878489">❌</tg-emoji>Соперник мертв"'
+            '\n<blockquote expandable>── •✧✧• ──────────'
+            '\n  + 100<tg-emoji emoji-id="5380033625909634211">❌</tg-emoji> xp, '
+            '\n  + 200<tg-emoji emoji-id="5201873447554145566">❌</tg-emoji> ¥</blockquote>')
+
+lose_text = ('<tg-emoji emoji-id="5463186335948878489">❌</tg-emoji>Поражение'
+             '\n<blockquote expandable>── •✧✧• ──────────'
+             '\n  + 55<tg-emoji emoji-id="5380033625909634211">❌</tg-emoji> xp, '
+             '\n  + 100<tg-emoji emoji-id="5201873447554145566">❌</tg-emoji> ¥</blockquote>')
+
+draw_text = ('<tg-emoji emoji-id="5465465194056525619">❌</tg-emoji>Ничья'
+             '\n<blockquote expandable>── •✧✧• ──────────'
+             '\n  + 80<tg-emoji emoji-id="5380033625909634211">❌</tg-emoji> xp, '
+             '\n  + 150<tg-emoji emoji-id="5201873447554145566">❌</tg-emoji> ¥</blockquote>')
+
+surrender_text = '<tg-emoji emoji-id="5316560584869690299">❌</tg-emoji> Поражение'
+
+surrender_r_text = ('<tg-emoji emoji-id="5465465194056525619">❌</tg-emoji>Победа: <tg-emoji emoji-id="5316560584869690299">❌</tg-emoji>Соперник сдался'
+                    '\n<blockquote expandable>── •✧✧• ──────────'
+                    '\n  + 100<tg-emoji emoji-id="5380033625909634211">❌</tg-emoji> xp, '
+                    '\n  + 200<tg-emoji emoji-id="5201873447554145566">❌</tg-emoji> ¥</blockquote>')
+
+time_out_text = ('<tg-emoji emoji-id="5465465194056525619">❌</tg-emoji>Победа: <tg-emoji emoji-id="5462990652943904884">❌</tg-emoji>Соперник афк'
+                 '\n<blockquote expandable>── •✧✧• ──────────'
+                 '\n  + 100<tg-emoji emoji-id="5380033625909634211">❌</tg-emoji> xp, '
+                 '\n  + 200<tg-emoji emoji-id="5201873447554145566">❌</tg-emoji> ¥</blockquote>')
 
 
 def account_text(character):
-    text = (f"                 {character.name}"
-            f"\n\n❤️{character.health}"
-            f" 🗡{character.attack}"
-            f" 🛡{character.defense}"
-                f" 🧪{character.mana}"
-            f" 🪫{character.energy}"
-            f"\n🩸К.ур: {character.crit_dmg}"
-            f" 🩸К.шн: {character.crit_ch}"
-            f" 🌐Щит: {character.shield}"
-            f"\n\n✊🏻Сила: {character.strength}"
-            f" 👣Лов.: {character.agility}"
-            f" 🧠Инт.: {character.intelligence}"
-            f"\n\n❤️‍🔥Пассивки: {character.passive_names}")
+    text = (f'                 {character.name}'
+            f'\n\n<tg-emoji emoji-id="5395343431973238126">❌</tg-emoji>{character.health}'
+            f' <tg-emoji emoji-id="5201665489532638627">❌</tg-emoji>{character.attack}'
+            f' <tg-emoji emoji-id="5465154440287757794">❌</tg-emoji>{character.defense}'
+            f' <tg-emoji emoji-id="5794242604103110904">❌</tg-emoji>{character.mana}'
+            f' <tg-emoji emoji-id="5371058888017715839">❌</tg-emoji>{character.energy}'
+            f'\n<tg-emoji emoji-id="5373342608028352831">❌</tg-emoji>К.ур: {character.crit_dmg}'
+            f' <tg-emoji emoji-id="5267373056027803452">❌</tg-emoji>К.шн: {character.crit_ch}'
+            f' <tg-emoji emoji-id="5251203410396458957">❌</tg-emoji>Щит: {character.shield}'
+            f'\n\n<tg-emoji emoji-id="5316791950462950306">❌</tg-emoji>Сила: {character.strength}'
+            f' <tg-emoji emoji-id="5949588538952518773">❌</tg-emoji>Лов.: {character.agility}'
+            f' <tg-emoji emoji-id="5371053287380361807">❌</tg-emoji>Инт.: {character.intelligence}'
+            f'\n\n<tg-emoji emoji-id="5341772463804002252">❌</tg-emoji>Пассивки: {character.passive_names}')
     return text
 
 
@@ -125,7 +130,7 @@ async def search_opponent(callback: CallbackQuery | Message, bot: Bot):
 
         r_character = random.choice(gacha.characters[universee][rar(character_photo.get_stats(universe, character, 'rarity'))])
         rival = {"_id": user_id * 10,
-                 "name": "AI ✨",
+                 "name": 'AI <tg-emoji emoji-id="5134472688986756318">❌</tg-emoji>',
                  "universe": universee,
                  "character": {
                      universee: r_character},
@@ -163,20 +168,30 @@ async def search_opponent(callback: CallbackQuery | Message, bot: Bot):
 
         battle_data[rival["_id"]] = rb_character
 
-        user_text = (f" ⚔️ Cоперник Найден! "
-                     # f"\n── •✧✧• ──────────"
-                     f"\n<blockquote expandable> 🪪  〢 {rival['name']} "
-                     f"\n── •✧✧• ───────"
-                     f"\n❖ ✨ Редкость: {r_rarity}"
-                     f"\n❖ 🗺 Вселенная: {r_universe}"
-                     f"\n\n   ✊🏻 Сила: {r_strength}"
-                     f"\n   👣 Ловкость: {r_agility}"
-                     f"\n   🧠 Интелект: {r_intelligence}"
-                     f"\n   ⚜️ Мощь: {r_power}</blockquote>"
-                     # f"\n── •✧✧• ──────────"
-                     )
+        user_text = (f'<tg-emoji emoji-id="5454014806950429357">❌</tg-emoji> Cоперник Найден! '
+                         # f"\n── •✧✧• ──────────"
+                         f'\n<blockquote expandable><tg-emoji emoji-id="5936017305585586269">❌</tg-emoji>  〢 {rival['name']} '
+                         f'\n── •✧✧• ───────'
+                         f'\n❖ <tg-emoji emoji-id="5415624997689381048">❌</tg-emoji> Редкость: {r_rarity}'
+                         f'\n❖ <tg-emoji emoji-id="5341294339454675575">❌</tg-emoji> Вселенная: {r_universe}'
+                         f'\n   <tg-emoji emoji-id="5316791950462950306">❌</tg-emoji> Сила: {r_strength}'
+                         f'\n   <tg-emoji emoji-id="5949588538952518773">❌</tg-emoji> Ловкость: {r_agility}'
+                         f'\n   <tg-emoji emoji-id="5371053287380361807">❌</tg-emoji> Интелект: {r_intelligence}'
+                         f'\n   <tg-emoji emoji-id="5431420156532235514">❌</tg-emoji> Мощь: {r_power}</blockquote>'
+                         # f"\n── •✧✧• ──────────"
+                         f'\n<i><tg-emoji emoji-id="5380033625909634211">❌</tg-emoji> Опыт: 1000 XP </i>')
+        now = datetime.utcnow()
 
-        await mongodb.update_user(account["_id"], {"battle.battle.status": 2, "battle.battle.rid": r_ident})
+        await mongodb.update_user(
+            account["_id"],
+            {
+                "battle.battle.status": 2,
+                "battle.battle.rid": r_ident,
+                "battle.battle.round": 1,
+                "battle.battle.turn": r_ident,
+                "battle.battle.turn_started_at": now
+            }
+        )
 
         if r_avatar_type == 'photo':
             await bot.send_photo(chat_id=user_id, photo=r_avatar, caption=user_text,
@@ -185,7 +200,7 @@ async def search_opponent(callback: CallbackQuery | Message, bot: Bot):
             await bot.send_animation(chat_id=user_id, animation=r_avatar, caption=user_text,
                                      reply_markup=reply_builder("🏴‍☠️ Сдаться"))
 
-        await bot.send_message(account["_id"], text="⏳ Ход соперника")
+        await bot.send_message(account["_id"], text='<tg-emoji emoji-id="6005552426675868041">❌</tg-emoji> Ход соперника <tg-emoji emoji-id="5010636296373142479">❌</tg-emoji>')
         # Инициализируем состояние пользователя
         user_data[r_ident] = {rb_character.b_round: False}
         user_data[user_id] = {b_character.b_round: True}
@@ -198,7 +213,7 @@ async def search_opponent(callback: CallbackQuery | Message, bot: Bot):
                 show_alert=True
             )
         else:
-            await callback.answer(text="💢 Вы уже находитесь в поиске соперника!")
+            await callback.answer(text='<tg-emoji emoji-id="6039884526929317741">❌</tg-emoji> Вы уже находитесь в поиске соперника!')
 
     elif account["battle"]["battle"]["status"] == 2:
         if isinstance(callback, CallbackQuery):
@@ -207,10 +222,20 @@ async def search_opponent(callback: CallbackQuery | Message, bot: Bot):
                 show_alert=True
             )
         else:
-            await callback.answer(text="💢 Вы уже находитесь в битве!")
+            await callback.answer(text='<tg-emoji emoji-id="6039884526929317741">❌</tg-emoji> Вы уже находитесь в битве!')
 
 
 async def ai(character, bot, callback, account):
+
+    r_character = battle_data.get(character.rid)
+
+    if character.ident != r_character.ident * 10:
+        if account["battle"]["battle"].get("finished"):
+            return
+
+    if not r_character:
+        return
+
     try:
         r_character = battle_data.get(character.rid)
 
@@ -232,74 +257,208 @@ async def ai(character, bot, callback, account):
         battle_data[r_character.ident] = r_character
 
         async def ai_send_round_photo():
-            if r_character.stun == 0:
-                character.b_round += 1
+
+            if character.ident != r_character.ident*10:
+                if account["battle"]["battle"].get("finished"):
+                    return
+
+            # if r_character.stun == 0:
+            #     character.b_round += 1
+            #     battle_data[r_character.ident].b_turn = False
+            #     battle_data[character.ident].b_turn = True
+            #
+            #     # 🔥 ВАЖНО: передаём ход ИГРОКУ в Mongo
+            #     await mongodb.update_user(
+            #         r_character.ident,  # ЭТО user_id (не *10)
+            #         {
+            #             "battle.battle.turn": r_character.ident,
+            #             "battle.battle.turn_started_at": datetime.utcnow()
+            #         }
+            #     )
+            #
+            #     await mongodb.update_user(
+            #         character.ident,
+            #         {
+            #             "battle.battle.round": character.b_round,
+            #             "battle.battle.turn": character.ident,
+            #             "battle.battle.turn_started_at": datetime.utcnow()
+            #         }
+            #     )
+            #     r_account = await mongodb.get_user(r_character.ident)
+            #     if r_account["battle"]["battle"]["status"] != 2:
+            #         return
+            #
+            #     mes = await bot.send_message(
+            #         r_character.ident,
+            #         text=f'.               ˗ˋˏ<tg-emoji emoji-id="5215480011322042129">❌</tg-emoji> Раунд {r_character.b_round}ˎˊ˗'
+            #              f'\n<blockquote expandable>{account_text(r_character)}</blockquote>'
+            #              f'\n➖➖➖➖➖➖➖➖➖➖➖'
+            #              f'\n<blockquote expandable>{account_text(character)}</blockquote>'
+            #              f'\n<tg-emoji emoji-id="5449372823476777969">❌</tg-emoji> Ваш ход:',
+            #         reply_markup=abilities_kb(
+            #             r_character.ability,
+            #             hp=r_character.health,
+            #             mana=r_character.mana,
+            #             energy=r_character.energy
+            #         ),
+            #         parse_mode=ParseMode.HTML
+            #     )
+            #
+            #     user_data[character.ident][character.b_round - 1] = True  # Обновляем состояние
+            #     # Инициализируем состояние пользователя
+            #     user_data[r_character.ident][r_character.b_round] = False
+            #     # Запускаем таймер
+            # else:
+            #     character.b_round += 1
+            #     r_character.b_round += 1
+            #     await mongodb.update_user(
+            #         character.ident,
+            #         {
+            #             "battle.battle.round": character.b_round,
+            #             "battle.battle.turn": character.ident,
+            #             "battle.battle.turn_started_at": datetime.utcnow()
+            #         }
+            #     )
+            #
+            #     battle_data[character.rid].b_turn = True
+            #     battle_data[character.ident].b_turn = False
+            #     await bot.send_message(r_character.ident,
+            #                            text=f'.                    ˗ˋˏ<tg-emoji emoji-id="5215480011322042129">❌</tg-emoji> Раунд {r_character.b_round - 1}ˎˊ˗'
+            #                                 # f"\n✧•───────────────────────•✧"
+            #                                 f'\n<blockquote expandable>{account_text(r_character)}</blockquote>'
+            #                                 # f"\n✧•──────────────•✧"
+            #                                 f'\n➖➖➖➖➖➖➖➖➖➖➖'
+            #                                 f'\n<blockquote expandable>{account_text(character)}</blockquote>'
+            #                                 # f"\n✧•───────────────────────•✧"
+            #                                 f'\n<tg-emoji emoji-id="5967744293425646719">❌</tg-emoji> Вы под действием оглушения',
+            #                            parse_mode=ParseMode.HTML)
+            #
+            #     user_data[r_character.ident][r_character.b_round - 1] = True  # Обновляем состояние
+            #     user_data[character.ident][character.b_round - 1] = True  # Обновляем состояние
+            #     # Инициализируем состояние пользователя
+            #     user_data[r_character.rid][character.b_round] = False
+            #     # Запускаем таймер
+            #     await bot.send_message(r_character.ident, '<tg-emoji emoji-id="6005552426675868041">❌</tg-emoji> Ход соперника <tg-emoji emoji-id="5010636296373142479">❌</tg-emoji>')
+            #     await ai(character, bot, callback, account)
+
+            # ---- ОБЩИЙ ПЕРЕХОД ХОДА ----
+            character.b_round += 1
+            r_character.b_round += 1
+            # передаём ход сопернику
+            battle_data[character.ident].b_turn = False
+            battle_data[r_character.ident].b_turn = True
+
+            await mongodb.update_user(
+                r_character.ident,
+                {
+                    "battle.battle.round": r_character.b_round,
+                    "battle.battle.turn": r_character.ident,
+                    "battle.battle.turn_started_at": datetime.utcnow()
+                }
+            )
+
+            await mongodb.update_user(
+                character.ident,
+                {
+                    "battle.battle.round": character.b_round,
+                    "battle.battle.turn": r_character.ident,
+                    "battle.battle.turn_started_at": datetime.utcnow()
+                }
+            )
+
+            r_account = await mongodb.get_user(r_character.ident)
+            if not r_account or r_account["battle"]["battle"]["status"] != 2:
+                return
+
+            # ---- ЕСЛИ СОПЕРНИК ОГЛУШЁН ----
+            if r_character.stun > 0:
+                r_character.stun -= 1
+
+                await bot.send_message(
+                    r_character.ident,
+                    text=(
+                        f'. ˗ˋˏРаунд {r_character.b_round}ˎˊ˗\n'
+                        f'<blockquote expandable>{account_text(r_character)}</blockquote>\n'
+                        f'➖➖➖➖➖➖➖➖➖➖➖\n'
+                        f'<blockquote expandable>{account_text(character)}</blockquote>\n'
+                        f'❌ Вы оглушены и пропускаете ход'
+                    ),
+                    parse_mode=ParseMode.HTML
+                )
+
+                # сразу передаём ход обратно
                 battle_data[r_character.ident].b_turn = False
                 battle_data[character.ident].b_turn = True
-                mes = await bot.send_message(r_character.ident,
-                                             text=f'.               ˗ˋˏ<tg-emoji emoji-id="5215480011322042129">❌</tg-emoji> Раунд {r_character.b_round}ˎˊ˗'
-                                                  # f"\n✧•───────────────────────•✧"
-                                                  f'\n<blockquote expandable>{account_text(r_character)}</blockquote>'
-                                                  # f'\n✧•──────────────•✧'
-                                                  f'\n➖➖➖➖➖➖➖➖➖➖➖'
-                                                  f'\n<blockquote expandable>{account_text(character)}</blockquote>'
-                                                  # f"\n✧•───────────────────────•✧"
-                                                  f'\n🔸 Ваш ход:',
-                                             reply_markup=inline_builder(r_character.ability, r_character.ability,
-                                                                         row_width=[2, 2]),
-                                             parse_mode=ParseMode.HTML)
-                user_data[character.ident][character.b_round - 1] = True  # Обновляем состояние
-                # Инициализируем состояние пользователя
-                user_data[r_character.ident][r_character.b_round] = False
-                # Запускаем таймер
-            else:
-                character.b_round += 1
-                r_character.b_round += 1
-                battle_data[character.rid].b_turn = True
-                battle_data[character.ident].b_turn = False
-                await bot.send_message(r_character.ident,
-                                       text=f'.                    ˗ˋˏ<tg-emoji emoji-id="5215480011322042129">❌</tg-emoji> Раунд {r_character.b_round - 1}ˎˊ˗'
-                                            # f"\n✧•───────────────────────•✧"
-                                            f'\n<blockquote expandable>{account_text(r_character)}</blockquote>'
-                                            # f"\n✧•──────────────•✧"
-                                            f'\n➖➖➖➖➖➖➖➖➖➖➖'
-                                            f'\n<blockquote expandable>{account_text(character)}</blockquote>'
-                                            # f"\n✧•───────────────────────•✧"
-                                            f'\n💫 Вы под действием оглушения',
-                                       parse_mode=ParseMode.HTML)
 
-                user_data[r_character.ident][r_character.b_round - 1] = True  # Обновляем состояние
-                user_data[character.ident][character.b_round - 1] = True  # Обновляем состояние
-                # Инициализируем состояние пользователя
-                user_data[r_character.rid][character.b_round] = False
-                # Запускаем таймер
-                await bot.send_message(r_character.ident, "⏳ Ход соперника")
+                await mongodb.update_user(
+                    character.ident,
+                    {
+                        "battle.battle.turn": character.ident,
+                        "battle.battle.turn_started_at": datetime.utcnow()
+                    }
+                )
+
+                # рекурсивно вызываем ИИ
                 await ai(character, bot, callback, account)
+                return
+
+            # ---- НОРМАЛЬНЫЙ ХОД ИГРОКА ----
+            mes = await bot.send_message(
+                r_character.ident,
+                text=(
+                    f'. ˗ˋˏРаунд {r_character.b_round}ˎˊ˗\n'
+                    f'<blockquote expandable>{account_text(r_character)}</blockquote>\n'
+                    f'➖➖➖➖➖➖➖➖➖➖➖\n'
+                    f'<blockquote expandable>{account_text(character)}</blockquote>\n'
+                    f'<tg-emoji emoji-id="5449372823476777969">❌</tg-emoji> Ваш ход:'
+                ),
+                reply_markup=abilities_kb(
+                    r_character.ability,
+                    hp=r_character.health,
+                    mana=r_character.mana,
+                    energy=r_character.energy
+                ),
+                parse_mode=ParseMode.HTML
+            )
+
+            user_data[character.ident][character.b_round - 1] = True
+            user_data[r_character.ident][r_character.b_round] = False
 
         if character.health <= 0 and r_character.health <= 0:
-            await bot.send_animation(chat_id=r_character, animation=draw_animation,
-                                     caption=draw_text, reply_markup=menu_card_button())
+            if character.b_round != r_character.b_round:
+                await mongodb.update_user(character.rid, {
+                    "battle.battle.finished": True
+                })
 
-            await mongodb.update_many(
-                {"_id": {"$in": [character.rid]}},
-                {"$set": {"battle.battle.status": 0, "battle.battle.rid": ""}}
-            )
+                await bot.send_animation(chat_id=r_character, animation=draw_animation,
+                                         caption=draw_text, reply_markup=menu_card_button())
 
-            await mongodb.update_many(
-                {"_id": {"$in": [character.rid]}},
-                {"$inc": {"stats.exp": 8, "battle.stats.ties": 1, "account.money": 15}}
-            )
-            battle_data.pop(character.rid, None)
-            battle_data.pop(character.rid * 10, None)
-            user_data.pop(character.rid, None)
-            user_data.pop(character.rid * 10, None)
+                await mongodb.update_many(
+                    {"_id": {"$in": [character.rid]}},
+                    {"$set": {"battle.battle.status": 0, "battle.battle.rid": ""}}
+                )
 
-            current_date = datetime.today().date()
-            current_datetime = datetime.combine(current_date, datetime.time(datetime.now()))
-            await mongodb.update_user(character.rid, {"tasks.last_arena_fight": current_datetime})
+                await mongodb.update_many(
+                    {"_id": {"$in": [character.rid]}},
+                    {"$inc": {"stats.exp": 8, "battle.stats.ties": 1, "account.money": 15}}
+                )
+                battle_data.pop(character.rid, None)
+                battle_data.pop(character.rid * 10, None)
+                user_data.pop(character.rid, None)
+                user_data.pop(character.rid * 10, None)
+
+                current_date = datetime.today().date()
+                current_datetime = datetime.combine(current_date, datetime.time(datetime.now()))
+                await mongodb.update_user(character.rid, {"tasks.last_arena_fight": current_datetime})
+            else:
+                await ai_send_round_photo()
 
         elif character.health <= 0:
             if character.b_round != r_character.b_round:
+                await mongodb.update_user(character.rid, {
+                    "battle.battle.finished": True
+                })
+
                 await bot.send_animation(chat_id=character.rid, animation=win_animation,
                                          caption=win_text, reply_markup=menu_card_button())
 
@@ -322,6 +481,10 @@ async def ai(character, bot, callback, account):
 
         elif r_character.health <= 0:
             if character.b_round != r_character.b_round:
+                await mongodb.update_user(character.rid, {
+                    "battle.battle.finished": True
+                })
+
                 await bot.send_animation(chat_id=character.rid, animation=lose_animation,
                                          caption=lose_text, reply_markup=menu_card_button())
 

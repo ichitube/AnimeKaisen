@@ -12,6 +12,7 @@ from app.data import mongodb, character_photo
 from app.filters.chat_type import ChatTypeFilter
 from app.keyboards.builders import inline_builder
 from app.recycling import profile
+from app.routers.tokio.clans import clan
 from app.utils.states import Promo
 from aiogram.exceptions import TelegramBadRequest
 
@@ -51,6 +52,8 @@ async def main_menu(message: Message | CallbackQuery):
         character = account['character'][account['universe']]
         avatar = character_photo.get_stats(universe, character, 'avatar')
         avatar_type = character_photo.get_stats(universe, character, 'type')
+        clan = account['clan']
+
 
         await profile.update_rank(user_id, account.get("battle", {}).get("stats", {}).get("wins", 0))
 
@@ -70,14 +73,18 @@ async def main_menu(message: Message | CallbackQuery):
         pattern = dict(
             caption=f'\n<tg-emoji emoji-id="5936017305585586269">❌</tg-emoji>  〢 Профиль {account['name']} {emoji}'
                     # f'\n₊⊹ . . ݁ ⟡ ݁ . ⊹ ₊ ݁. ݁₊ ⊹ . ݁ ⟡ ݁ . . ⊹₊'
-                    f'\n➖➖➖➖➖➖➖➖➖'
-                    f'\n<tg-emoji emoji-id="5195198887987520417">❌</tg-emoji> <b>{character}</b>'
-                    f'\n<tg-emoji emoji-id="5370845694431076232">❌</tg-emoji> Вселенная: {universe}'
-                    f'\n<tg-emoji emoji-id="5269717137508805226">❌</tg-emoji> <b>{rank}</b>'
+                    # f'\n➖➖➖➖➖➖➖➖➖'
+                    f'\n<tg-emoji emoji-id="5303496333737342360">❌</tg-emoji><tg-emoji emoji-id="5301294836580628932">❌</tg-emoji><tg-emoji emoji-id="5301294836580628932">❌</tg-emoji><tg-emoji emoji-id="5301294836580628932">❌</tg-emoji><tg-emoji emoji-id="5301294836580628932">❌</tg-emoji><tg-emoji emoji-id="5301294836580628932">❌</tg-emoji><tg-emoji emoji-id="5301294836580628932">❌</tg-emoji><tg-emoji emoji-id="5301294836580628932">❌</tg-emoji><tg-emoji emoji-id="5303278943967655238">❌</tg-emoji>'
+                    f'\n<tg-emoji emoji-id="5399959611283356481">❌</tg-emoji> <b>{character}</b>'
+                    f'\n<tg-emoji emoji-id="5341294339454675575">❌</tg-emoji> Вселенная: {universe}'
+                    f'\n<tg-emoji emoji-id="5292216731710806241">❌</tg-emoji> Клан: {clan}'
+                    f'\n<tg-emoji emoji-id="5269717137508805226">❌</tg-emoji> Ранг: <b>{rank}</b>'
+                    f'\n<tg-emoji emoji-id="5431420156532235514">❌</tg-emoji> Мощь: <b>{account['campaign']['power']}</b>'
                     f'\n<tg-emoji emoji-id="5269244149940365620">❌</tg-emoji> <b>{level}</b>'
-                    f'\n➖➖➖➖➖➖➖➖➖'
-                    f'\n<i><b>⟡ {account['account']['money']}<tg-emoji emoji-id="5201873447554145566">❌</tg-emoji>   ⟡ {account['campaign']['power']}<tg-emoji emoji-id="5431420156532235514">❌</tg-emoji>'
-                    f'\n⟡ {account['stats']['exp']}<tg-emoji emoji-id="5380033625909634211">❌</tg-emoji>XP   ⟡ {total_characters}<tg-emoji emoji-id="5399959611283356481">❌</tg-emoji></b></i>',
+                    f'\n<b><tg-emoji emoji-id="5201873447554145566">❌</tg-emoji> {account['account']['money']}¥ </b>' # ₊ ݁. ݁₊ {account['campaign']['power']}<tg-emoji emoji-id="5431420156532235514">❌</tg-emoji></b>'
+                    # f'\n➖➖➖➖➖➖➖➖➖'
+                    f'\n<tg-emoji emoji-id="5303496333737342360">❌</tg-emoji><tg-emoji emoji-id="5301294836580628932">❌</tg-emoji><tg-emoji emoji-id="5301294836580628932">❌</tg-emoji><tg-emoji emoji-id="5301294836580628932">❌</tg-emoji><tg-emoji emoji-id="5301294836580628932">❌</tg-emoji><tg-emoji emoji-id="5301294836580628932">❌</tg-emoji><tg-emoji emoji-id="5301294836580628932">❌</tg-emoji><tg-emoji emoji-id="5301294836580628932">❌</tg-emoji><tg-emoji emoji-id="5303278943967655238">❌</tg-emoji>'
+                    f'\n<b><i>⟡ {account['stats']['exp']}<tg-emoji emoji-id="5380033625909634211">❌</tg-emoji>XP  ⟡ {total_characters}<tg-emoji emoji-id="5399959611283356481">❌</tg-emoji></i></b>',
             parse_mode=ParseMode.HTML,
             reply_markup=inline_builder(
                 [f"🗯 {character}", "🎐 Баннеры", "〽️ Меню", "📜 Квесты", "🪄 Крафт", "🥡 Инвентарь", "⚙️ Настройки", "🎁 Рефераль"],
@@ -153,7 +160,7 @@ async def debug(message: Message):
         await message.answer("Не нашёл custom emoji в сообщении 🫤")
         return
 
-    text = "✅ Найдено emoji-id:\n" + "\n".join(f"<code>{eid}</code>" for eid in found_ids)
+    text = "☑️ Найдено emoji-id:\n" + "\n".join(f"<code>{eid}</code>" for eid in found_ids)
     await message.answer(text, parse_mode="HTML")
 
 
@@ -222,7 +229,7 @@ async def referral_link(callback: CallbackQuery):
                                         f'\n ❖ ⛩️ Условия:'
                                         f'\n── •✧✧• ──────────'
                                         f'\n<blockquote expandable> • 🎁 Вы получите 🧧 священный билет за каждых 3 приглашенных игроков и 🌟 звезды телеграм если попадите в топ 👥 рейтинга приглашений'
-                                        f'\n • ✅ Новые игроки считаються приглашенными только после того, '
+                                        f'\n • ☑️ Новые игроки считаються приглашенными только после того, '
                                         f'как они зарегистрировались по вашей реферальной ссылке и получили 🎴 первую карту.'
                                         f'\n • ⏱️ Рейтинг будет сбрасываться каждые две недели'
                                         f'\n • 📎 Игроки которые уже зарегистрировались не считаються приглашенными.'
@@ -281,7 +288,7 @@ async def form_name(message: Message, state: FSMContext):
                                  f"\n • {reward}")
             await state.clear()
         else:
-            await message.answer("❖ ✅ Вы уже использовали этот промокод")
+            await message.answer("❖ ☑️ Вы уже использовали этот промокод")
             await state.clear()
             return
     else:

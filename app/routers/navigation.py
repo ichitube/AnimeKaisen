@@ -48,7 +48,7 @@ async def battle_rating(callback: CallbackQuery):
     account = await mongodb.get_user(callback.from_user.id)
     rating = await mongodb.wins_rat(account)
 
-    media = InputMediaAnimation(media="CgACAgIAAx0CfstymgACRwABaKyCDrQV6vglI9aMJ9esarQbaO0AAvKZAALvCGlJzouYInNTMGQ2BA")
+    media = InputMediaAnimation(media="CgACAgIAAx0CfstymgACU8Jphx1b_jf1vgN7pt2gYR7OFbMYhwACSIwAAgaBOUiT9J0YST4UUjoE")
     await callback.message.edit_media(media=media)
 
     await callback.message.edit_caption(

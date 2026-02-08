@@ -342,7 +342,7 @@ async def battle(callback: CallbackQuery, bot: Bot):
     if not is_first:
         # Повторный клик в том же раунде
         try:
-            await callback.answer("Уже засчитано ✅", show_alert=False)
+            await callback.answer("Уже засчитано ☑️", show_alert=False)
         except Exception:
             pass
         return

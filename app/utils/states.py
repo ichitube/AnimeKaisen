@@ -57,3 +57,11 @@ class ClanMessage(StatesGroup):
 
 class TestAvatar(StatesGroup):
     waiting_for_avatar = State()
+
+
+class ClanDeleteConfirm(StatesGroup):
+    waiting_confirm = State()
+
+
+class ClanLeaveConfirm(StatesGroup):
+    waiting_confirm = State()

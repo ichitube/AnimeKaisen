@@ -5,7 +5,7 @@ from aiogram.types import Message, CallbackQuery, InputMediaAnimation, InputMedi
 from aiogram.fsm.context import FSMContext
 from datetime import datetime
 from app.data import mongodb, character_photo
-from app.utils.states import ClanCreateState, ClanInvite, ClanSetName, ClanSetDescription, ClanMessage
+from app.utils.states import ClanCreateState, ClanDeleteConfirm, ClanInvite, ClanSetName, ClanSetDescription, ClanMessage, ClanLeaveConfirm
 from app.keyboards.builders import inline_builder
 from app.filters.chat_type import ChatTypeFilter
 
@@ -19,6 +19,16 @@ bot = Bot
 async def clan(callback: CallbackQuery | Message):
     user_id = callback.from_user.id
     account = await mongodb.get_user(user_id)
+    if "clan_ui" not in account:
+        await mongodb.update_user(
+            user_id,
+            {"clan_ui": {
+                "requests_page": 0,
+                "kick_page": 0,
+                "leader_page": 0,
+                "clan_ui.members_page": 0,
+            }}
+        )
     if 'clan' not in account:
         await mongodb.update_user(user_id, {"clan": ''})
     account = await mongodb.get_user(user_id)
@@ -92,46 +102,71 @@ async def clan(callback: CallbackQuery | Message):
 
 
 @router.callback_query(F.data == "clan_members")
-async def show_members(callback: CallbackQuery):
+async def clan_members(callback: CallbackQuery):
     user_id = callback.from_user.id
     account = await mongodb.get_user(user_id)
-    clan_name = account["clan"]
+    clan_name = account.get("clan")
     clan = await mongodb.db.clans.find_one({"_id": clan_name})
 
     if not clan:
-        await callback.answer("❖ ✖️ Клан не найден", show_alert=True)
+        await callback.answer("❖ ✖️ Клан не найден")
         return
 
     members = clan.get("members", [])
-    member_names = []
-    for uid in members:
+    ui = account.get("clan_ui", {})
+    page = ui.get("members_page", 0)
+
+    PAGE_SIZE = 5
+    start = page * PAGE_SIZE
+    end = start + PAGE_SIZE
+    current = members[start:end]
+
+    text = ""
+    for uid in current:
         user = await mongodb.get_user(uid)
         if uid == clan["leader_id"]:
-            member_names.append(f" • 👑 {user['name']} (Лидер)")
+            text += f"\n • 👑 {user['name']}"
         else:
-            member_names.append(f" • 🪪 {user["name"]}")
+            text += f"\n • 🪪 {user['name']}"
 
-    member_list = "\n".join(member_names)
-    buttons = ["🔙 Назад"]
-    callbacks = ["clan"]
+    buttons = []
+    callbacks = []
 
-    if account["_id"] == clan["leader_id"]:
-        buttons.insert(0, "🚪 Выгнать участника")
-        callbacks.insert(0, "clan_kick")
-        buttons.insert(1, "📜 Написать сообщение")
-        callbacks.insert(1, "clan_message")
-    media = InputMediaPhoto(media="AgACAgIAAx0CfstymgACP5toE0hLvcp1ZPqf0PPhn0fg9Rq7zAACtPUxGzgreUht0_3v-laN7QEAAwIAA3kAAzYE")
-    await callback.message.edit_media(media=media)
+    if end < len(members):
+        buttons.append("➡️")
+        callbacks.append("next_members")
+
+    if page > 0:
+        buttons.append("⬅️")
+        callbacks.append("prev_members")
+
+    buttons.append("🔙 Назад")
+    callbacks.append("clan")
+
     await callback.message.edit_caption(
-        caption=f"❖ 📇 Участники клана:"
-                f"\n── •✧✧• ────────"
-                f"\n{member_list}",
-        reply_markup=inline_builder(
-            buttons,
-            callbacks,
-            row_width=[1]
-        )
+        caption="❖ 📇 Участники клана:"
+                "\n── •✧✧• ────────"
+                f"{text}",
+        reply_markup=inline_builder(buttons, callbacks, row_width=[1])
     )
+
+
+@router.callback_query(F.data == "next_members")
+async def next_members(callback: CallbackQuery):
+    await mongodb.db.users.update_one(
+        {"_id": callback.from_user.id},
+        {"$inc": {"clan_ui.members_page": 1}}
+    )
+    await clan_members(callback)
+
+
+@router.callback_query(F.data == "prev_members")
+async def prev_members(callback: CallbackQuery):
+    await mongodb.db.users.update_one(
+        {"_id": callback.from_user.id},
+        {"$inc": {"clan_ui.members_page": -1}}
+    )
+    await clan_members(callback)
 
 
 @router.callback_query(F.data == "clan_message")
@@ -160,7 +195,7 @@ async def process_message(message: Message, bot: Bot):
                 chat_id=uid,
                 text=f"❖ 📜 Сообщение от лидера клана:\n  •  {message_text}"
             )
-    await message.answer("❖ ✅ Сообщение отправлено всем участникам клана")
+    await message.answer("❖ ☑️ Сообщение отправлено всем участникам клана")
 
 
 @router.callback_query(F.data == "clan_create")
@@ -237,7 +272,7 @@ async def clan_set_description(message: Message, state: FSMContext):
     await mongodb.update_user(user_id, {"clan": name})
 
     await state.clear()
-    await message.answer(f"❖ ✅ Клан {name} создан! Вы стали его лидером")
+    await message.answer(f"❖ ☑️ Клан {name} создан! Вы стали его лидером")
 
 
 MAX_CLAN_MEMBERS = 10
@@ -295,7 +330,7 @@ async def request_to_clan(callback: CallbackQuery):
         return
 
     if user_id in clan.get("requests", []):
-        await callback.answer("❖ ✅ Вы уже подали заявку", show_alert=True)
+        await callback.answer("❖ ☑️ Вы уже подали заявку", show_alert=True)
         return
 
     if len(clan["members"]) >= MAX_CLAN_MEMBERS:
@@ -306,7 +341,7 @@ async def request_to_clan(callback: CallbackQuery):
         {"_id": clan_name},
         {"$addToSet": {"requests": user_id}}
     )
-    await callback.answer("❖ ✅ Заявка на вступление отправлена", show_alert=True)
+    await callback.answer("❖ ☑️ Заявка на вступление отправлена", show_alert=True)
 
 
 @router.callback_query(F.data == "clan_invite")
@@ -339,11 +374,11 @@ async def process_invite_id(message: Message, state: FSMContext, bot: Bot):
     await bot.send_message(
         chat_id=invited_id,
         text=f"❖ 🎌 Вас пригласили в клан {clan_name}. Принять приглашение?",
-        reply_markup=inline_builder(["✅ Принять", "✖️ Отказаться"],
+        reply_markup=inline_builder(["☑️ Принять", "✖️ Отказаться"],
                                     [f"accept_invite_{clan_name}", f"decline_invite_{clan_name}"])
     )
 
-    await message.answer("❖ ✅ Приглашение отправлено")
+    await message.answer("❖ ☑️ Приглашение отправлено")
     await state.clear()
 
 
@@ -373,12 +408,12 @@ async def accept_invite(callback: CallbackQuery, bot: Bot):
     )
     await mongodb.update_user(user_id, {"clan": clan_name})
 
-    await bot.send_message(chat_id=user_id, text=f"❖ ✅ Вы вступили в клан {clan_name}")
+    await bot.send_message(chat_id=user_id, text=f"❖ ☑️ Вы вступили в клан {clan_name}")
     await bot.send_message(
         chat_id=clan["leader_id"],
-        text=f"❖ ✅ {name} принял приглашение в клан {clan_name}"
+        text=f"❖ ☑️ {name} принял приглашение в клан {clan_name}"
     )
-    await callback.answer("❖ ✅ Вы приняли приглашение")
+    await callback.answer("❖ ☑️ Вы приняли приглашение")
     await callback.message.delete()
 
 
@@ -407,6 +442,7 @@ async def decline_invite(callback: CallbackQuery, bot: Bot):
 async def show_requests(callback: CallbackQuery):
     user_id = callback.from_user.id
     user = await mongodb.get_user(user_id)
+
     clan_name = user.get("clan")
     clan = await mongodb.db.clans.find_one({"_id": clan_name})
 
@@ -416,40 +452,49 @@ async def show_requests(callback: CallbackQuery):
 
     requests = clan.get("requests", [])
     if not requests:
-        await callback.message.edit_caption(caption="❖ 📭 Заявок на вступление нет",
-                                            reply_markup=inline_builder(
-                                                ["🔙 Назад"],
-                                                ["clan"],
-                                                row_width=[1]
-                                            ))
+        await callback.message.edit_caption(
+            caption="❖ 📭 Заявок на вступление нет",
+            reply_markup=inline_builder(["🔙 Назад"], ["clan"], row_width=[1])
+        )
         return
 
-    ids = [uid for uid in requests]
-    names = []
+    # ---------- UI STATE ----------
+    ui = user.get("clan_ui", {})
+    page = ui.get("requests_page", 0)
 
-    for uid in ids:
-        user = await mongodb.get_user(uid)
-        if user and "name" in user:
-            names.append(user["name"])
-        else:
-            names.append("❓Неизвестно")
-    callbacks = [f"accept_or_reject_req_{uid}" for uid in requests]
+    if page < 0:
+        page = 0
+        await mongodb.update_user(user_id, {"clan_ui.requests_page": 0})
 
-    button = []
+    PAGE_SIZE = 5
+    start = page * PAGE_SIZE
+    end = start + PAGE_SIZE
+    current_requests = requests[start:end]
+    # --------------------------------
 
-    if len(requests) > 5:
-        requests = requests[:5]
-        button += ["➡️", "🔙 Назад"]
-        callbacks += ["next_requests", "clan"]
-    else:
-        button += ["🔙 Назад"]
-        callbacks += ["clan"]
-
-    buttons = [f"📨 {uid}" for uid in requests] + button
-
+    # ---------- TEXT ----------
     us = ""
-    for i in range(len(names)):
-        us += f"\n • 🪪 {names[i]} | 🆔 {ids[i]}"
+    for uid in current_requests:
+        u = await mongodb.get_user(uid)
+        name = u["name"] if u else "❓Неизвестно"
+        us += f"\n • 🪪 {name} | 🆔 {uid}"
+    # --------------------------
+
+    # ---------- BUTTONS ----------
+    buttons = [f"📨 {uid}" for uid in current_requests]
+    callbacks = [f"accept_or_reject_req_{uid}" for uid in current_requests]
+
+    if end < len(requests):
+        buttons.append("➡️")
+        callbacks.append("next_requests")
+
+    if page > 0:
+        buttons.append("⬅️")
+        callbacks.append("prev_requests")
+
+    buttons.append("🔙 Назад")
+    callbacks.append("clan")
+    # -----------------------------
 
     await callback.message.edit_caption(
         caption="❖ 📭 Заявки на вступление в клан:"
@@ -484,9 +529,30 @@ async def accept_or_reject_request(callback: CallbackQuery):
         caption=f"\n ❖ 🪪 {account["name"]}:"
                 f"\n── •✧✧• ────────"
                 f"\n • 🀄️ exp: {account["stats"]["exp"]}  💴 money: {account["account"]["money"]}",
-        reply_markup=inline_builder(["✅ Принять", "✖️ Отклонить", "🔙 Назад"],
+        reply_markup=inline_builder(["☑️ Принять", "✖️ Отклонить", "🔙 Назад"],
                                     [f"accept_req_{target_id}", f"decline_req_{target_id}", "clan_requests"])
     )
+
+
+@router.callback_query(F.data == "next_requests")
+async def next_requests(callback: CallbackQuery):
+    user_id = callback.from_user.id
+    await mongodb.db.users.update_one(
+        {"_id": user_id},
+        {"$inc": {"clan_ui.requests_page": 1}}
+    )
+    await show_requests(callback)
+
+
+@router.callback_query(F.data == "prev_requests")
+async def prev_requests(callback: CallbackQuery):
+    user_id = callback.from_user.id
+    await mongodb.db.users.update_one(
+        {"_id": user_id},
+        {"$inc": {"clan_ui.requests_page": -1}}
+    )
+
+    await show_requests(callback)
 
 
 @router.callback_query(F.data.startswith("accept_req_"))
@@ -508,8 +574,8 @@ async def accept_request(callback: CallbackQuery, bot: Bot):
         {"$pull": {"requests": target_id}, "$addToSet": {"members": target_id}}
     )
     await mongodb.update_user(target_id, {"clan": clan_name})
-    await bot.send_message(chat_id=target_id, text=f"✅ Ваша заявка в клан {clan_name} была одобрена!")
-    await callback.answer("❖ ✅ Участник добавлен", show_alert=True)
+    await bot.send_message(chat_id=target_id, text=f"☑️ Ваша заявка в клан {clan_name} была одобрена!")
+    await callback.answer("❖ ☑️ Участник добавлен", show_alert=True)
     await callback.message.answer(f"❖ ➕ {name} вступил в клан")
     await show_requests(callback)
 
@@ -526,26 +592,70 @@ async def decline_request(callback: CallbackQuery, bot: Bot):
 
 
 @router.callback_query(F.data == "clan_pass_leader")
-async def pass_leadership(callback: CallbackQuery, state: FSMContext):
+async def pass_leadership(callback: CallbackQuery):
     user_id = callback.from_user.id
-    clan_name = (await mongodb.get_user(user_id)).get("clan")
+    account = await mongodb.get_user(user_id)
+    clan_name = account.get("clan")
     clan = await mongodb.db.clans.find_one({"_id": clan_name})
+
+    if not clan or clan["leader_id"] != user_id:
+        await callback.answer("❖ ✖️ Только лидер может передать лидерство")
+        return
 
     members = [uid for uid in clan["members"] if uid != user_id]
     if not members:
         await callback.answer("❖ ✖️ Некому передать лидерство")
         return
-    # берем первых 5 участников
-    buttons = [f"🎴 {uid}" for uid in members[:5]]
-    callbacks = [f"new_leader_{uid}" for uid in members]
-    if len(members) > 5:
-        buttons += ["➡️", "🔙 Назад"]
-        callbacks += ["next_leader", "clan"]
-    else:
-        buttons += ["🔙 Назад"]
-        callbacks += ["clan"]
 
-    await callback.message.answer("❖ Кому передать лидерство?", reply_markup=inline_builder(buttons, callbacks, row_width=[1]))
+    ui = account.get("clan_ui", {})
+    page = ui.get("leader_page", 0)
+
+    PAGE_SIZE = 5
+    start = page * PAGE_SIZE
+    end = start + PAGE_SIZE
+    current = members[start:end]
+
+    buttons = []
+    callbacks = []
+
+    for uid in current:
+        user = await mongodb.get_user(uid)
+        name = user["name"] if user else "❓"
+        buttons.append(f"👑 {name}")
+        callbacks.append(f"new_leader_{uid}")
+
+    if end < len(members):
+        buttons.append("➡️")
+        callbacks.append("next_leader")
+
+    if page > 0:
+        buttons.append("⬅️")
+        callbacks.append("prev_leader")
+
+    buttons.append("🔙 Назад")
+    callbacks.append("clan")
+
+    await callback.message.edit_reply_markup(
+        reply_markup=inline_builder(buttons, callbacks, row_width=[1])
+    )
+
+
+@router.callback_query(F.data == "next_leader")
+async def next_leader(callback: CallbackQuery):
+    await mongodb.db.users.update_one(
+        {"_id": callback.from_user.id},
+        {"$inc": {"clan_ui.leader_page": 1}}
+    )
+    await pass_leadership(callback)
+
+
+@router.callback_query(F.data == "prev_leader")
+async def prev_leader(callback: CallbackQuery):
+    await mongodb.db.users.update_one(
+        {"_id": callback.from_user.id},
+        {"$inc": {"clan_ui.leader_page": -1}}
+    )
+    await pass_leadership(callback)
 
 
 @router.callback_query(F.data == "next_leader")
@@ -596,7 +706,7 @@ async def confirm_new_leader(callback: CallbackQuery, bot: Bot):
     old_leader = callback.from_user.id
     clan_name = (await mongodb.get_user(old_leader)).get("clan")
     await mongodb.db.clans.update_one({"_id": clan_name}, {"$set": {"leader_id": new_leader}})
-    await callback.answer("❖ ✅ Лидерство передано")
+    await callback.answer("❖ ☑️ Лидерство передано")
     await bot.send_message(chat_id=new_leader, text=f"❖ 👑 Вы стали лидером клана {clan_name}")
 
 
@@ -625,19 +735,58 @@ async def clan_settings(callback: CallbackQuery):
 
 
 @router.callback_query(F.data == "delete_clan")
-async def delete_clan(callback: CallbackQuery):
+async def delete_clan(callback: CallbackQuery, state: FSMContext):
     user_id = callback.from_user.id
     account = await mongodb.get_user(user_id)
-    clan_name = account["clan"]
-    clan = await mongodb.db.clans.find_one({"_id": clan_name})
 
+    if not account.get("clan"):
+        await callback.answer("❖ ✖️ Вы не состоите в клане", show_alert=True)
+        return
+
+    await state.set_state(ClanDeleteConfirm.waiting_confirm)
+    await state.update_data(clan_name=account["clan"])
+
+    await callback.message.answer(
+        "❖ 📃 <b>Удаление клана</b>\n\n"
+        "Это действие <b>НЕОБРАТИМО</b>.\n"
+        "Чтобы подтвердить удаление клана, напишите:\n\n"
+        "<code>подтвердить</code>\n\n"
+        "Любое другое сообщение — отмена.",
+    )
+
+
+@router.message(ClanDeleteConfirm.waiting_confirm)
+async def confirm_delete_clan(message: Message, state: FSMContext):
+    user_id = message.from_user.id
+    text = message.text.strip().lower()
+    data = await state.get_data()
+    clan_name = data.get("clan_name")
+
+    # Отмена
+    if text != "подтвердить":
+        await state.clear()
+        await message.answer("❖ ❎ Удаление клана отменено")
+        return
+
+    clan = await mongodb.db.clans.find_one({"_id": clan_name})
+    if not clan:
+        await state.clear()
+        await message.answer("❖ ✖️ Клан не найден")
+        return
+
+    # удаляем клан
     await mongodb.delete_clan(clan_name)
-    await mongodb.update_user(user_id, {"clan": ""})
-    for uid in clan["members"]:
+
+    # чистим клан у всех участников
+    for uid in clan.get("members", []):
         await mongodb.update_user(uid, {"clan": ""})
-    await callback.message.answer("🔥")
-    await callback.answer("❖ ✅ Клан удален", show_alert=True)
-    await callback.message.delete()
+
+    await state.clear()
+
+    await message.answer(
+        "🔥 <b>Клан был полностью удалён</b>"
+    )
+
 
 
 @router.callback_query(F.data == "clan_edit_desc")
@@ -653,7 +802,7 @@ async def edit_clan_desc(message: Message, state: FSMContext):
     clan_name = (await mongodb.get_user(user_id)).get("clan")
 
     await mongodb.update_clan(clan_name, {"description": new_desc})
-    await message.answer("❖ ✅ Описание клана обновлено")
+    await message.answer("❖ ☑️ Описание клана обновлено")
     await state.clear()
 
 
@@ -683,53 +832,80 @@ async def rename_clan(message: Message, state: FSMContext):
     # # обновляем название у всех участников клана
     # for uid in clan["members"]:
     #     await mongodb.update_user(uid, {"clan": new_name})
-    await message.answer(f"❖ ✅ Клан переименован в {new_name}", show_alert=True)
+    await message.answer(f"❖ ☑️ Клан переименован в {new_name}", show_alert=True)
     await state.clear()
 
 
 @router.callback_query(F.data == "clan_kick")
-async def kick_prompt(callback: CallbackQuery, state: FSMContext):
+async def clan_kick(callback: CallbackQuery):
     user_id = callback.from_user.id
-    clan_name = (await mongodb.get_user(user_id)).get("clan")
+    account = await mongodb.get_user(user_id)
+    clan_name = account.get("clan")
     clan = await mongodb.db.clans.find_one({"_id": clan_name})
 
-    if clan["leader_id"] != user_id:
+    if not clan or clan["leader_id"] != user_id:
         await callback.answer("❖ ✖️ Только лидер может кикать участников")
         return
 
     members = [uid for uid in clan["members"] if uid != user_id]
-    # получаем имена этих участников
-    member_names = []
-    for uid in members:
-        user = await mongodb.get_user(uid)
-        if uid == clan["leader_id"]:
-            member_names.append(f" • 👑 {user['name']} (Лидер)")
-        else:
-            member_names.append(f" • 🪪 {user['name']}")
+
     if not members:
         await callback.answer("❖ ✖️ Некого кикать")
         return
 
-    clean_names = []
+    ui = account.get("clan_ui", {})
+    page = ui.get("kick_page", 0)
+    if page < 0:
+        page = 0
+        await mongodb.update_user(user_id, {"clan_ui.kick_page": 0})
 
-    for line in member_names:
-        match = re.search(r"<b>(.*?)</b>", line)
-        if match:
-            clean_names.append(match.group(1))  # Взяли только текст из <b>Имя</b>
-        else:
-            clean_names.append(line)
+    PAGE_SIZE = 5
+    start = page * PAGE_SIZE
+    end = start + PAGE_SIZE
+    current = members[start:end]
 
-    # берем первых 5 участников
-    buttons = [f"{uid}" for uid in clean_names[:5]]
-    callbacks = [f"kick_{uid}" for uid in members[:5]]
-    if len(members) > 5:
-        buttons += ["➡️", "🔙 Назад"]
-        callbacks += ["next_kick", "clan"]
-    else:
-        buttons += ["🔙 Назад"]
-        callbacks += ["clan"]
-    await callback.message.edit_reply_markup(inline_message_id=callback.inline_message_id,
-                                             reply_markup=inline_builder(buttons, callbacks, row_width=[1]))
+    buttons = []
+    callbacks = []
+
+    for uid in current:
+        user = await mongodb.get_user(uid)
+        name = user["name"] if user else "❓"
+        buttons.append(f"🚪 {name}")
+        callbacks.append(f"kick_{uid}")
+
+    if end < len(members):
+        buttons.append("➡️")
+        callbacks.append("next_kick")
+
+    if page > 0:
+        buttons.append("⬅️")
+        callbacks.append("prev_kick")
+
+    buttons.append("🔙 Назад")
+    callbacks.append("clan")
+
+    await callback.message.edit_reply_markup(
+        reply_markup=inline_builder(buttons, callbacks, row_width=[1])
+    )
+
+
+@router.callback_query(F.data == "next_kick")
+async def next_kick(callback: CallbackQuery):
+    await mongodb.db.users.update_one(
+        {"_id": callback.from_user.id},
+        {"$inc": {"clan_ui.kick_page": 1}}
+    )
+    await clan_kick(callback)
+
+
+@router.callback_query(F.data == "prev_kick")
+async def prev_kick(callback: CallbackQuery):
+    await mongodb.db.users.update_one(
+        {"_id": callback.from_user.id},
+        {"$inc": {"clan_ui.kick_page": -1}}
+    )
+    await clan_kick(callback)
+
 
 
 @router.callback_query(F.data == "next_kick")
@@ -828,39 +1004,90 @@ async def kick_member(callback: CallbackQuery, bot: Bot):
     await mongodb.db.clans.update_one({"_id": clan_name}, {"$pull": {"members": target_id}})
     await mongodb.update_user(target_id, {"clan": ''})
     await bot.send_message(chat_id=target_id, text=f"❖ ✖️ Вы были исключены из клана {clan_name}")
-    await callback.answer("❖ ✅ Участник исключен", show_alert=True)
+    await callback.answer("❖ ☑️ Участник исключен", show_alert=True)
 
 
 @router.callback_query(F.data == "clan_leave")
-async def leave_clan(callback: CallbackQuery, bot: Bot):
+async def leave_clan(callback: CallbackQuery, state: FSMContext):
     user_id = callback.from_user.id
     user = await mongodb.get_user(user_id)
-    name = user["name"]
-    clan_name = user.get("clan")
+
+    if not user.get("clan"):
+        await callback.answer("❖ ✖️ Вы не состоите в клане", show_alert=True)
+        return
+
+    await state.set_state(ClanLeaveConfirm.waiting_confirm)
+    await state.update_data(clan_name=user["clan"])
+
+    await callback.message.answer(
+        "☑️ <b>Выход из клана</b>\n\n"
+        "Чтобы подтвердить выход из клана, напишите:\n\n"
+        "<code>покинуть</code>\n\n"
+        "Любое другое сообщение — отмена."
+    )
+
+
+@router.message(ClanLeaveConfirm.waiting_confirm)
+async def confirm_leave_clan(message: Message, state: FSMContext, bot: Bot):
+    user_id = message.from_user.id
+    text = message.text.strip().lower()
+    data = await state.get_data()
+    clan_name = data.get("clan_name")
+
+    if text != "покинуть":
+        await state.clear()
+        await message.answer("❖ ☑️ Выход из клана отменён")
+        return
+
+    user = await mongodb.get_user(user_id)
     clan = await mongodb.db.clans.find_one({"_id": clan_name})
 
     if not clan:
-        await callback.answer("❖ ✖️ Клан не найден")
+        await state.clear()
+        await message.answer("❖ ✖️ Клан не найден")
         return
 
-    await mongodb.update_user(user_id, {"clan": ""})
-    await mongodb.db.clans.update_one({"_id": clan_name}, {"$pull": {"members": user_id}})
+    name = user["name"]
 
+    # удаляем пользователя из клана
+    await mongodb.update_user(user_id, {"clan": ""})
+    await mongodb.db.clans.update_one(
+        {"_id": clan_name},
+        {"$pull": {"members": user_id}}
+    )
+
+    # --- ЕСЛИ ЛИДЕР ---
     if clan["leader_id"] == user_id:
-        remaining = clan["members"]
+        remaining = [uid for uid in clan["members"] if uid != user_id]
+
         if not remaining:
+            # клан пуст — удаляем
             await mongodb.db.clans.delete_one({"_id": clan_name})
-            await callback.message.answer("❖ 👑 Вы покинули клан. Клан был распущен")
+            await message.answer("❖ 👑 Вы покинули клан. Клан был распущен")
         else:
+            # передаём лидерство
             new_leader = remaining[0]
-            await mongodb.db.clans.update_one({"_id": clan_name}, {"$set": {"leader_id": new_leader}})
-            await callback.message.answer(f"❖ 👑 Вы покинули клан. Лидерство передано участнику {new_leader}")
-            await bot.send_message(new_leader, f"👑 Вы стали новым лидером клана {clan_name}")
+            await mongodb.db.clans.update_one(
+                {"_id": clan_name},
+                {"$set": {"leader_id": new_leader}}
+            )
+            await message.answer(
+                f"❖ 👑 Вы покинули клан.\n"
+                f"Лидерство передано участнику {new_leader}"
+            )
+            await bot.send_message(
+                new_leader,
+                f"👑 Вы стали новым лидером клана {clan_name}"
+            )
     else:
-        await callback.message.answer("❖ ✅ Вы покинули клан", show_alert=True)
-        # уведомление лидеру и участникам
-        await bot.send_message(clan["leader_id"], f"❖ ➖ {name} покинул клан")
-        await callback.message.delete()
+        # обычный участник
+        await message.answer("❖ ☑️ Вы покинули клан")
+        await bot.send_message(
+            clan["leader_id"],
+            f"❖ ➖ {name} покинул клан"
+        )
+
+    await state.clear()
 
 
 @router.callback_query(F.data == "clan_shop")

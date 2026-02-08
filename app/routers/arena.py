@@ -31,18 +31,20 @@ async def arena(callback: CallbackQuery | Message, stop=0):
         intelligence = character_photo.get_stats(universe, character, 'arena')['intelligence']
         power = character_photo.get_stats(universe, character, 'arena')['power']
 
-        msg = (f"\n  •  ✊🏻 Сила: {strength}"
-               f"\n  •  👣 Ловкость: {agility}"
-               f"\n  •  🧠 Интелект: {intelligence}"
-               f"\n  •  ⚜️ Мощь: {power}")
+        msg = (f'\n  •  <tg-emoji emoji-id="5316791950462950306">❌</tg-emoji> Сила: {strength}'
+               f'\n  •  <tg-emoji emoji-id="5949588538952518773">❌</tg-emoji> Ловкость: {agility}'
+               f'\n  •  <tg-emoji emoji-id="5371053287380361807">❌</tg-emoji> Интелект: {intelligence}'
+               f'\n  •  <tg-emoji emoji-id="5431420156532235514">❌</tg-emoji> Мощь: {power}')
 
         pattern = dict(
-            caption=f"❖ 🏟️ <b>Арена</b>  ⚔️"
-                    f"\n── •✧✧• ──────"
-                    f"\n<blockquote>🎴 <b>{character}</b>"
-                    f"\n🎐 <b>{rank}</b>"
+            caption=f'❖      <tg-emoji emoji-id="5454014806950429357">❌</tg-emoji> <b>Арена</b> <tg-emoji emoji-id="5206198853283377523">❌</tg-emoji>'
+                     # f"\n── •✧✧• ──────"
+                    f'\n<tg-emoji emoji-id="5314365873761302196">❌</tg-emoji><tg-emoji emoji-id="5314312126540561977">❌</tg-emoji><tg-emoji emoji-id="5294189049412598712">❌</tg-emoji><tg-emoji emoji-id="5294211542156330171">❌</tg-emoji><tg-emoji emoji-id="5294446055960623166">❌</tg-emoji><tg-emoji emoji-id="5294189049412598712">❌</tg-emoji><tg-emoji emoji-id="5314516781732214873">❌</tg-emoji><tg-emoji emoji-id="5314575051553520578">❌</tg-emoji>'
+                    f'\n<blockquote><tg-emoji emoji-id="5399959611283356481">❌</tg-emoji> <b>{character}</b>'
+                    f'\n<tg-emoji emoji-id="5269717137508805226">❌</tg-emoji> Ранг: <b>{rank}</b>'
                     f"{msg}</blockquote>"
-                    f"\n 👑 {wins} Побед | 🀄️ {exp} XP",
+                    f'\n<tg-emoji emoji-id="5195286329226706640">❌</tg-emoji><tg-emoji emoji-id="5195102113784414350">❌</tg-emoji><tg-emoji emoji-id="5195102113784414350">❌</tg-emoji><tg-emoji emoji-id="5195102113784414350">❌</tg-emoji><tg-emoji emoji-id="5195102113784414350">❌</tg-emoji><tg-emoji emoji-id="5195102113784414350">❌</tg-emoji><tg-emoji emoji-id="5195102113784414350">❌</tg-emoji><tg-emoji emoji-id="5195439792703162670">❌</tg-emoji>'
+                    f'\n<b><i> <tg-emoji emoji-id="5447112111605964162">❌</tg-emoji> {wins} Побед | <tg-emoji emoji-id="5380033625909634211">❌</tg-emoji> {exp} XP </i></b>',
             parse_mode=ParseMode.HTML,
             reply_markup=inline_builder(
                 buttons,
@@ -117,7 +119,7 @@ async def b_arena(callback: CallbackQuery | Message):
     else:
         buttons = ["⚔️ PvP", "✨ AI", "🔙 Назад", "📜 Правила"]
         calls = ["search_opponent", "ai_battle", "arena", "battle_rules"]
-        txt = "❖  🏟️ <b>Арена</b>  ⚔️"
+        txt = '❖            <tg-emoji emoji-id="5454014806950429357">❌</tg-emoji> <b>Арена</b> <tg-emoji emoji-id="5206198853283377523">❌</tg-emoji>'
         rows = [2, 2]
     await profile.update_rank(callback.from_user.id, account.get("battle", {}).get("stats", {}).get("wins", 0))
 
@@ -125,11 +127,13 @@ async def b_arena(callback: CallbackQuery | Message):
 
     pattern = dict(
         caption=f"{txt}"
-                f"\n── •✧✧• ──────────"
-                f"\n<blockquote>⚔️ PvP - Битва против реального 👤 игрока который так же 🔎 ищет соперника</blockquote>"
-                f"\n➖➖➖➖➖➖➖➖➖➖➖"
-                f"\n<blockquote>✨ AI - Битва против 🤖 Искуственного Интелекта. Удобно для 🎯 тренировок</blockquote>"
-                f"\n<i>🌊 В битве ⚔️ {in_battle} игроков</i> 🌊",
+                # f"\n── •✧✧• ──────────"
+                f'\n<tg-emoji emoji-id="5314365873761302196">❌</tg-emoji><tg-emoji emoji-id="5314312126540561977">❌</tg-emoji><tg-emoji emoji-id="5294189049412598712">❌</tg-emoji><tg-emoji emoji-id="5294189049412598712">❌</tg-emoji><tg-emoji emoji-id="5294211542156330171">❌</tg-emoji><tg-emoji emoji-id="5294446055960623166">❌</tg-emoji><tg-emoji emoji-id="5294189049412598712">❌</tg-emoji><tg-emoji emoji-id="5294189049412598712">❌</tg-emoji><tg-emoji emoji-id="5314516781732214873">❌</tg-emoji><tg-emoji emoji-id="5314575051553520578">❌</tg-emoji>'
+                f'\n<blockquote><tg-emoji emoji-id="5375161616872520280">❌</tg-emoji> PvP - Битва против реального <tg-emoji emoji-id="5192998928429113725">❌</tg-emoji> игрока, который так же <tg-emoji emoji-id="5010357961017524878">❌</tg-emoji> ищет соперника</blockquote>'
+                # f"\n➖➖➖➖➖➖➖➖➖➖➖"
+                f'\n<blockquote><tg-emoji emoji-id="5226639745106330551">❌</tg-emoji> AI - Битва против <tg-emoji emoji-id="5134472688986756318">❌</tg-emoji> Искуственного Интелекта. Удобно для <tg-emoji emoji-id="5463274047771000031">❌</tg-emoji> тренировок</blockquote>'
+                f'\n<tg-emoji emoji-id="5195286329226706640">❌</tg-emoji><tg-emoji emoji-id="5195102113784414350">❌</tg-emoji><tg-emoji emoji-id="5195102113784414350">❌</tg-emoji><tg-emoji emoji-id="5195102113784414350">❌</tg-emoji><tg-emoji emoji-id="5195102113784414350">❌</tg-emoji><tg-emoji emoji-id="5195102113784414350">❌</tg-emoji><tg-emoji emoji-id="5195102113784414350">❌</tg-emoji><tg-emoji emoji-id="5195102113784414350">❌</tg-emoji><tg-emoji emoji-id="5195102113784414350">❌</tg-emoji><tg-emoji emoji-id="5195439792703162670">❌</tg-emoji>'
+                f'\n<i><tg-emoji emoji-id="5195086398499087308">❌</tg-emoji> Сейчас в битве <tg-emoji emoji-id="5341772463804002252">❌</tg-emoji> {in_battle} игроков.</i>',
         parse_mode=ParseMode.HTML,
         reply_markup=inline_builder(
             buttons,
@@ -138,7 +142,7 @@ async def b_arena(callback: CallbackQuery | Message):
     )
 
     media = InputMediaPhoto(
-        media='AgACAgIAAxkBAAEBGppm6oI246rBQNH-lZFRiZFD6TbJlgACeuUxG1fhUEt5QK8VqfcCQQEAAwIAA3gAAzYE'
+        media='AgACAgIAAx0CfstymgACU_hpiDvANrlbFmiwNPOHRh6OaO1Q_gAC1hJrG5GhSUhtSq4yXI39HAEAAwIAA3kAAzoE'
     )
     await callback.message.edit_media(media)
     await callback.message.edit_caption(**pattern)

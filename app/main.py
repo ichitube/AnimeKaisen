@@ -20,6 +20,7 @@ from app.payments import stars
 from app.callbacks import callback
 # from middlewares.AntiFloodMiddleWare import AntiFloodMiddleware, AntiFloodMiddlewareM
 from app.keyboards.builders import menu_button
+from app.services.search_cleanup import cancel_expired_searches
 
 # --- МИНИМАЛЬНО: просто приглушаем логи ---
 logging.basicConfig(level=logging.WARNING)
@@ -53,6 +54,15 @@ async def on_shutdown() -> None:
     """Хук завершения: аккуратно закрываем HTTP-сессию бота."""
     await bot.session.close()
     logging.info("[shutdown] bot session closed")
+
+async def background_tasks():
+    while True:
+        try:
+            await cancel_expired_searches()
+        except Exception:
+            pass
+        await asyncio.sleep(60)  # раз в минуту
+
 
 dp = Dispatcher()
 dp.startup.register(on_startup)
@@ -95,6 +105,8 @@ async def main() -> None:
     # Мидлвари
     # dp.callback_query.middleware(AntiFloodMiddleware())
     # dp.message.middleware(AntiFloodMiddlewareM())
+
+    asyncio.create_task(cancel_expired_searches(bot))
 
     # снимаем вебхук
     await bot.delete_webhook(drop_pending_updates=True)

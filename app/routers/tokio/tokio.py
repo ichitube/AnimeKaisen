@@ -86,6 +86,28 @@ menu = ["CgACAgIAAxkBAAIVCWXMvbya7qFOU8F85SXUu24hM5wgAAKfOwACeyZoShH4z6iUPi8kNAQ
         "CgACAgIAAx0CfstymgACIAhnE7hfoRhlTEwMXl0Olo7O0N33hQACuFgAAqiJoEirg1wj-bItjTYE",
         ]
 
+emoji = [
+    '<tg-emoji emoji-id="5458819397885920052">❌</tg-emoji>',
+    '<tg-emoji emoji-id="5460780295269678060">❌</tg-emoji>',
+    '<tg-emoji emoji-id="5461053309160816515">❌</tg-emoji>',
+    '<tg-emoji emoji-id="5458599087538473190">❌</tg-emoji>',
+    '<tg-emoji emoji-id="5456311557891856026">❌</tg-emoji>',
+    '<tg-emoji emoji-id="5456173358729172334">❌</tg-emoji>',
+    '<tg-emoji emoji-id="5454418357782619222">❌</tg-emoji>',
+    '<tg-emoji emoji-id="5454409896697042283">❌</tg-emoji>',
+    '<tg-emoji emoji-id="5215629261435577801">❌</tg-emoji>',
+    '<tg-emoji emoji-id="5215228231749215339">❌</tg-emoji>',
+    '<tg-emoji emoji-id="5215289211694884153">❌</tg-emoji>',
+    '<tg-emoji emoji-id="5327779408814033760">❌</tg-emoji>',
+    '<tg-emoji emoji-id="5328056584528479307">❌</tg-emoji>',
+    '<tg-emoji emoji-id="5328288315193968434">❌</tg-emoji>',
+    '<tg-emoji emoji-id="5325782446589889970">❌</tg-emoji>',
+    '<tg-emoji emoji-id="5325682519880783291">❌</tg-emoji>',
+    '<tg-emoji emoji-id="5327839985032774447">❌</tg-emoji>',
+    '<tg-emoji emoji-id="5325968345659363120">❌</tg-emoji>',
+    '<tg-emoji emoji-id="5325657557530856602">❌</tg-emoji>',
+    '<tg-emoji emoji-id="5327982676731248710">❌</tg-emoji>'
+]
 
 @router.message(
     ChatTypeFilter(chat_type=["private"]),
@@ -105,20 +127,29 @@ async def tokio(callback: CallbackQuery | Message):
         area_cb = "arena"
     power = account['campaign']['power']
     top_text = await mongodb.get_top10_text()
+
+    characters = account['inventory']['characters']
+
+    total_characters = 0
+    for outer_key in characters:
+        for inner_key in characters[outer_key]:
+            total_characters += len(characters[outer_key][inner_key])
+
     pattern = dict(
-        caption=f"𓂃 ࣪˖ ִֶཐི༏ཋྀ󠀮 〽️  <b>Меню</b> ᓚᘏᗢ"
-                f"\n── •✧✧• ──────────"
-                f"\n🌊 Добро пожаловать в мир карт"
-                "\n<blockquote>🏟️ Захватывающие битвы!"
-                "\n🎴 Собирай персонажей "
-                "\n⚔️ Сражайся с противниками"
-                "\n🔥 Навыки из аниме в боях"
-                "\n♟ Придумай свою стратегию"
-                "\n🌟 Зарабатывай Telegram Stars"
-                "\n🐦‍🔥 Уничтожай боссов с 🎌 кланом"
-                "\n💬 Вступай в сообщество </blockquote>"
-                "\n➖➖➖➖➖➖➖➖➖➖➖"
-                f"\n❁ 💴 {money} ¥ ", # ❁ ⚜️ Мощь: {power}",
+        caption=f"𓂃 ࣪˖ {random.choice(emoji)}󠀮 〽️<b>еню</b> ᓚᘏᗢ"
+                f'\n<tg-emoji emoji-id="5195286329226706640">❌</tg-emoji><tg-emoji emoji-id="5195102113784414350">❌</tg-emoji><tg-emoji emoji-id="5195102113784414350">❌</tg-emoji><tg-emoji emoji-id="5194920707250733601">❌</tg-emoji><tg-emoji emoji-id="5197235750457849674">❌</tg-emoji><tg-emoji emoji-id="5195263548720168749">❌</tg-emoji><tg-emoji emoji-id="5195017764921687102">❌</tg-emoji><tg-emoji emoji-id="5195102113784414350">❌</tg-emoji><tg-emoji emoji-id="5195102113784414350">❌</tg-emoji><tg-emoji emoji-id="5195439792703162670">❌</tg-emoji>'
+                f'\n<tg-emoji emoji-id="5415624997689381048">❌</tg-emoji> Добро пожаловать в мир'
+                '\n<blockquote><tg-emoji emoji-id="5206198853283377523">❌</tg-emoji> Захватывающие битвы!'
+                '\n<tg-emoji emoji-id="5399908355143645853">❌</tg-emoji> Собирай персонажей '
+                '\n<tg-emoji emoji-id="5201665489532638627">❌</tg-emoji> Сражайся с противниками'
+                '\n<tg-emoji emoji-id="5435976794710754668">❌</tg-emoji> Навыки из аниме в боях'
+                '\n<tg-emoji emoji-id="5474616880306077288">❌</tg-emoji>Придумай свою стратегию <tg-emoji emoji-id="5474237454305214364">❌</tg-emoji>'
+                '\n<tg-emoji emoji-id="5292216731710806241">❌</tg-emoji> Создай или вступи в клан'
+                '\n<tg-emoji emoji-id="5346309121794659890">❌</tg-emoji> Зарабатывай Telegram Stars'
+                '\n<tg-emoji emoji-id="5199633166842736536">❌</tg-emoji> Уничтожай боссов в походе'
+                '\n<tg-emoji emoji-id="5406617055405285810">❌</tg-emoji> Вступай в сообщество </blockquote>'
+                f'\n<tg-emoji emoji-id="5195286329226706640">❌</tg-emoji><tg-emoji emoji-id="5195102113784414350">❌</tg-emoji><tg-emoji emoji-id="5195102113784414350">❌</tg-emoji><tg-emoji emoji-id="5195102113784414350">❌</tg-emoji><tg-emoji emoji-id="5195102113784414350">❌</tg-emoji><tg-emoji emoji-id="5195102113784414350">❌</tg-emoji><tg-emoji emoji-id="5195102113784414350">❌</tg-emoji><tg-emoji emoji-id="5195102113784414350">❌</tg-emoji><tg-emoji emoji-id="5195102113784414350">❌</tg-emoji><tg-emoji emoji-id="5195439792703162670">❌</tg-emoji>' # "\n➖➖➖➖➖➖➖➖➖➖➖"
+                f'\n⟡ <tg-emoji emoji-id="5201873447554145566">❌</tg-emoji> {money}¥ ⟡ {total_characters}<tg-emoji emoji-id="5399959611283356481">❌</tg-emoji>', # ❁ ⚜️ Мощь: {power}",
         parse_mode=ParseMode.HTML,
         reply_markup=inline_builder(
             [area, "🪪 Профиль", "🏯 Клан 🎌", " 🐦‍🔥Босс", "⛩️ Подземелье", "🏮 Рынок", "🏠 Дом"],
