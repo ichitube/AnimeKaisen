@@ -2,11 +2,11 @@ from app.data import character_photo
 
 
 class CardCharacters:
-    def __init__(self, ident, p_name, universe, cb, name, slave, rid, data,
+    def __init__(self, ident, player_nick_name, universe, cb, name, slave, rid, data,
                  status="🎴", avatar=None, avatar_type=None, rarity=None, strength=None,
                  agility=None, intelligence=None, clas=None, shield=0, stun=0, health=None,
                  attack=None, defense=None, mana=None, crit_dmg=None, crit_ch=None,
-                 b_round=1, b_turn=True, c_status="🎴", is_active=False):
+                 round=1, turn=True, c_status="🎴", is_active=False):
 
         # Если переданы None, получаем данные из character_photo
         if avatar is None:
@@ -29,7 +29,7 @@ class CardCharacters:
         self.avatar = avatar
         self.avatar_type = avatar_type
         self.ident = ident
-        self.p_name = p_name
+        self.player_nick_name = player_nick_name
         self.universe = universe
         self.cb = cb
         self.rarity = rarity
@@ -46,8 +46,8 @@ class CardCharacters:
         self.crit_dmg = crit_dmg if crit_dmg is not None else strength + (agility // 2) + (intelligence // 4)
         self.crit_ch = crit_ch if crit_ch is not None else agility + (strength // 2) + (intelligence // 4)
         self.clas = clas
-        self.b_round = b_round
-        self.b_turn = b_turn
+        self.round = round
+        self.turn = turn
         self.rid = rid
         self.slave = slave
         self.c_status = c_status

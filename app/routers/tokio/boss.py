@@ -795,7 +795,7 @@ async def battle_boss(callback: CallbackQuery, state: FSMContext):
         cb = f"┋{name}┋"
         character = card_characters.CardCharacters(
             ident=account["_id"],
-            p_name=account["name"],
+            player_nick_name=account["name"],
             universe=universe,
             cb=cb,
             name=name,

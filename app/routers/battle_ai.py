@@ -202,8 +202,8 @@ async def search_opponent(callback: CallbackQuery | Message, bot: Bot):
 
         await bot.send_message(account["_id"], text='<tg-emoji emoji-id="6005552426675868041">❌</tg-emoji> Ход соперника <tg-emoji emoji-id="5010636296373142479">❌</tg-emoji>')
         # Инициализируем состояние пользователя
-        user_data[r_ident] = {rb_character.b_round: False}
-        user_data[user_id] = {b_character.b_round: True}
+        user_data[r_ident] = {rb_character.round: False}
+        user_data[user_id] = {b_character.round: True}
         await ai(rb_character, bot, callback, account)
 
     elif account["battle"]["battle"]["status"] == 1:
@@ -226,6 +226,41 @@ async def search_opponent(callback: CallbackQuery | Message, bot: Bot):
 
 
 async def ai(character, bot, callback, account):
+    # === НАЧАЛО ХОДА AI (ПРОВЕРКА STUN) ===
+    if character.stun > 0:
+        character.stun -= 1
+
+        rival = battle_data.get(character.rid)
+        next_round = character.round + 1
+        character.round = next_round
+        rival.round = next_round
+
+        now = datetime.utcnow()
+
+        await mongodb.update_user(
+            rival.ident,
+            {
+                "battle.battle.round": next_round,
+                "battle.battle.turn": rival.ident,
+                "battle.battle.turn_started_at": now
+            }
+        )
+
+        await mongodb.update_user(
+            character.ident,
+            {
+                "battle.battle.round": next_round,
+                "battle.battle.turn": rival.ident,
+                "battle.battle.turn_started_at": now
+            }
+        )
+
+        await bot.send_message(
+            rival.ident,
+            "💫 Противник оглушён и пропускает ход. Ваш ход."
+        )
+
+        return  # ← ВОТ ЭТОГО У ТЕБЯ НЕ ХВАТАЛО
 
     r_character = battle_data.get(character.rid)
 
@@ -243,6 +278,9 @@ async def ai(character, bot, callback, account):
             action = random.choice(character.ability)
             # action = '˹🗡Атака˼'
             mana, energy = await characters.turn(character, bot, action, r_character, 0, ai=True)
+            # КЛАМП ХП
+            character.health = max(0, character.health)
+            r_character.health = max(0, r_character.health)
 
             if not mana:
                 continue  # Выбираем новую способность
@@ -262,151 +300,37 @@ async def ai(character, bot, callback, account):
                 if account["battle"]["battle"].get("finished"):
                     return
 
-            # if r_character.stun == 0:
-            #     character.b_round += 1
-            #     battle_data[r_character.ident].b_turn = False
-            #     battle_data[character.ident].b_turn = True
-            #
-            #     # 🔥 ВАЖНО: передаём ход ИГРОКУ в Mongo
-            #     await mongodb.update_user(
-            #         r_character.ident,  # ЭТО user_id (не *10)
-            #         {
-            #             "battle.battle.turn": r_character.ident,
-            #             "battle.battle.turn_started_at": datetime.utcnow()
-            #         }
-            #     )
-            #
-            #     await mongodb.update_user(
-            #         character.ident,
-            #         {
-            #             "battle.battle.round": character.b_round,
-            #             "battle.battle.turn": character.ident,
-            #             "battle.battle.turn_started_at": datetime.utcnow()
-            #         }
-            #     )
-            #     r_account = await mongodb.get_user(r_character.ident)
-            #     if r_account["battle"]["battle"]["status"] != 2:
-            #         return
-            #
-            #     mes = await bot.send_message(
-            #         r_character.ident,
-            #         text=f'.               ˗ˋˏ<tg-emoji emoji-id="5215480011322042129">❌</tg-emoji> Раунд {r_character.b_round}ˎˊ˗'
-            #              f'\n<blockquote expandable>{account_text(r_character)}</blockquote>'
-            #              f'\n➖➖➖➖➖➖➖➖➖➖➖'
-            #              f'\n<blockquote expandable>{account_text(character)}</blockquote>'
-            #              f'\n<tg-emoji emoji-id="5449372823476777969">❌</tg-emoji> Ваш ход:',
-            #         reply_markup=abilities_kb(
-            #             r_character.ability,
-            #             hp=r_character.health,
-            #             mana=r_character.mana,
-            #             energy=r_character.energy
-            #         ),
-            #         parse_mode=ParseMode.HTML
-            #     )
-            #
-            #     user_data[character.ident][character.b_round - 1] = True  # Обновляем состояние
-            #     # Инициализируем состояние пользователя
-            #     user_data[r_character.ident][r_character.b_round] = False
-            #     # Запускаем таймер
-            # else:
-            #     character.b_round += 1
-            #     r_character.b_round += 1
-            #     await mongodb.update_user(
-            #         character.ident,
-            #         {
-            #             "battle.battle.round": character.b_round,
-            #             "battle.battle.turn": character.ident,
-            #             "battle.battle.turn_started_at": datetime.utcnow()
-            #         }
-            #     )
-            #
-            #     battle_data[character.rid].b_turn = True
-            #     battle_data[character.ident].b_turn = False
-            #     await bot.send_message(r_character.ident,
-            #                            text=f'.                    ˗ˋˏ<tg-emoji emoji-id="5215480011322042129">❌</tg-emoji> Раунд {r_character.b_round - 1}ˎˊ˗'
-            #                                 # f"\n✧•───────────────────────•✧"
-            #                                 f'\n<blockquote expandable>{account_text(r_character)}</blockquote>'
-            #                                 # f"\n✧•──────────────•✧"
-            #                                 f'\n➖➖➖➖➖➖➖➖➖➖➖'
-            #                                 f'\n<blockquote expandable>{account_text(character)}</blockquote>'
-            #                                 # f"\n✧•───────────────────────•✧"
-            #                                 f'\n<tg-emoji emoji-id="5967744293425646719">❌</tg-emoji> Вы под действием оглушения',
-            #                            parse_mode=ParseMode.HTML)
-            #
-            #     user_data[r_character.ident][r_character.b_round - 1] = True  # Обновляем состояние
-            #     user_data[character.ident][character.b_round - 1] = True  # Обновляем состояние
-            #     # Инициализируем состояние пользователя
-            #     user_data[r_character.rid][character.b_round] = False
-            #     # Запускаем таймер
-            #     await bot.send_message(r_character.ident, '<tg-emoji emoji-id="6005552426675868041">❌</tg-emoji> Ход соперника <tg-emoji emoji-id="5010636296373142479">❌</tg-emoji>')
-            #     await ai(character, bot, callback, account)
+            # ---------- ПЕРЕДАЧА ХОДА (AI ↔ PLAYER) ----------
+            next_round = character.round + 1
+            now = datetime.utcnow()
 
-            # ---- ОБЩИЙ ПЕРЕХОД ХОДА ----
-            character.b_round += 1
-            r_character.b_round += 1
-            # передаём ход сопернику
-            battle_data[character.ident].b_turn = False
-            battle_data[r_character.ident].b_turn = True
-
-            await mongodb.update_user(
-                r_character.ident,
-                {
-                    "battle.battle.round": r_character.b_round,
-                    "battle.battle.turn": r_character.ident,
-                    "battle.battle.turn_started_at": datetime.utcnow()
-                }
-            )
+            # === ЕСЛИ НЕ ОГЛУШЁН — ПЕРЕДАЁМ ХОД ИГРОКУ ===
+            character.round = next_round
+            r_character.round = next_round
 
             await mongodb.update_user(
                 character.ident,
                 {
-                    "battle.battle.round": character.b_round,
+                    "battle.battle.round": next_round,
                     "battle.battle.turn": r_character.ident,
-                    "battle.battle.turn_started_at": datetime.utcnow()
+                    "battle.battle.turn_started_at": now
                 }
             )
 
-            r_account = await mongodb.get_user(r_character.ident)
-            if not r_account or r_account["battle"]["battle"]["status"] != 2:
-                return
-
-            # ---- ЕСЛИ СОПЕРНИК ОГЛУШЁН ----
-            if r_character.stun > 0:
-                r_character.stun -= 1
-
-                await bot.send_message(
-                    r_character.ident,
-                    text=(
-                        f'. ˗ˋˏРаунд {r_character.b_round}ˎˊ˗\n'
-                        f'<blockquote expandable>{account_text(r_character)}</blockquote>\n'
-                        f'➖➖➖➖➖➖➖➖➖➖➖\n'
-                        f'<blockquote expandable>{account_text(character)}</blockquote>\n'
-                        f'❌ Вы оглушены и пропускаете ход'
-                    ),
-                    parse_mode=ParseMode.HTML
-                )
-
-                # сразу передаём ход обратно
-                battle_data[r_character.ident].b_turn = False
-                battle_data[character.ident].b_turn = True
-
-                await mongodb.update_user(
-                    character.ident,
-                    {
-                        "battle.battle.turn": character.ident,
-                        "battle.battle.turn_started_at": datetime.utcnow()
-                    }
-                )
-
-                # рекурсивно вызываем ИИ
-                await ai(character, bot, callback, account)
-                return
+            await mongodb.update_user(
+                r_character.ident,
+                {
+                    "battle.battle.round": next_round,
+                    "battle.battle.turn": r_character.ident,
+                    "battle.battle.turn_started_at": now
+                }
+            )
 
             # ---- НОРМАЛЬНЫЙ ХОД ИГРОКА ----
             mes = await bot.send_message(
                 r_character.ident,
                 text=(
-                    f'. ˗ˋˏРаунд {r_character.b_round}ˎˊ˗\n'
+                    f'. ˗ˋˏРаунд {r_character.round}ˎˊ˗\n'
                     f'<blockquote expandable>{account_text(r_character)}</blockquote>\n'
                     f'➖➖➖➖➖➖➖➖➖➖➖\n'
                     f'<blockquote expandable>{account_text(character)}</blockquote>\n'
@@ -421,11 +345,11 @@ async def ai(character, bot, callback, account):
                 parse_mode=ParseMode.HTML
             )
 
-            user_data[character.ident][character.b_round - 1] = True
-            user_data[r_character.ident][r_character.b_round] = False
+            user_data[character.ident][character.round - 1] = True
+            user_data[r_character.ident][r_character.round] = False
 
         if character.health <= 0 and r_character.health <= 0:
-            if character.b_round != r_character.b_round:
+            if character.round != r_character.round:
                 await mongodb.update_user(character.rid, {
                     "battle.battle.finished": True
                 })
@@ -454,7 +378,7 @@ async def ai(character, bot, callback, account):
                 await ai_send_round_photo()
 
         elif character.health <= 0:
-            if character.b_round != r_character.b_round:
+            if character.round != r_character.round:
                 await mongodb.update_user(character.rid, {
                     "battle.battle.finished": True
                 })
@@ -480,7 +404,7 @@ async def ai(character, bot, callback, account):
                 await ai_send_round_photo()
 
         elif r_character.health <= 0:
-            if character.b_round != r_character.b_round:
+            if character.round != r_character.round:
                 await mongodb.update_user(character.rid, {
                     "battle.battle.finished": True
                 })

@@ -240,11 +240,11 @@ async def start_duel(callback: CallbackQuery, bot: Bot):
                                          parse_mode=ParseMode.HTML)
             # Инициализируем состояние пользователя
             duel_user_data[chat_id] = {}
-            duel_user_data[chat_id][rival["_id"]] = {b_character.b_round: False}
-            duel_user_data[chat_id][user_id] = {rb_character.b_round: True}
+            duel_user_data[chat_id][rival["_id"]] = {b_character.round: False}
+            duel_user_data[chat_id][user_id] = {rb_character.round: True}
 
             # Запускаем таймер
-            await duel_timeout(chat_id, rival["_id"], b_character.b_round, mes)
+            await duel_timeout(chat_id, rival["_id"], b_character.round, mes)
 
     elif account["battle"]["battle"]["status"] == 1:
         await callback.answer(text="💢 Вы уже находитесь в поиске соперника!", show_alert=True)
@@ -270,7 +270,7 @@ async def duel_battle(callback: CallbackQuery, bot: Bot):
         if account["battle"]["battle"]["status"] == 2:
             if user_id != character.ident:
                 return await callback.answer("✖️ Не ваш ход!", show_alert=True)
-            if character.b_turn:
+            if character.turn:
                 return await callback.answer("✖️ Не ваш ход!", show_alert=True)
 
             mana, energy = await characters.turn(character, bot, action, r_character, chat_id)
@@ -290,11 +290,11 @@ async def duel_battle(callback: CallbackQuery, bot: Bot):
 
             async def send_round_photo():
                 if r_character.stun == 0:
-                    duel_battle_data[chat_id][r_character.ident].b_turn = False
-                    duel_battle_data[chat_id][character.ident].b_turn = True
-                    if character.b_round != r_character.b_round:
+                    duel_battle_data[chat_id][r_character.ident].turn = False
+                    duel_battle_data[chat_id][character.ident].turn = True
+                    if character.round != r_character.round:
                         await bot.send_message(chat_id,
-                                               text=f".        ˗ˋˏ<tg-emoji emoji-id="5215480011322042129">❌</tg-emoji> Раунд {r_character.b_round}ˎˊ˗"
+                                               text=f".        ˗ˋˏ<tg-emoji emoji-id="5215480011322042129">❌</tg-emoji> Раунд {r_character.round}ˎˊ˗"
                                                     f"\n✧•────────────────•✧"
                                                     f"\n<blockquote expandable>{duel_text(r_character)}"
                                                     f"\n✧•────────────────•✧"
@@ -305,28 +305,28 @@ async def duel_battle(callback: CallbackQuery, bot: Bot):
                                                  reply_markup=inline_builder(r_character.ability, r_character.ability,
                                                                              row_width=[2, 2]),
                                                  parse_mode=ParseMode.HTML)
-                    character.b_round += 1
-                    duel_user_data[chat_id][user_id][character.b_round - 1] = True  # Обновляем состояние
+                    character.round += 1
+                    duel_user_data[chat_id][user_id][character.round - 1] = True  # Обновляем состояние
                     # Инициализируем состояние пользователя
-                    duel_user_data[chat_id][r_character.ident][r_character.b_round] = False
+                    duel_user_data[chat_id][r_character.ident][r_character.round] = False
                     # Запускаем таймер
-                    await duel_timeout(chat_id, r_character.ident, r_character.b_round, mes)
+                    await duel_timeout(chat_id, r_character.ident, r_character.round, mes)
                 else:
-                    duel_battle_data[chat_id][character.rid].b_turn = True
-                    duel_battle_data[chat_id][character.ident].b_turn = False
+                    duel_battle_data[chat_id][character.rid].turn = True
+                    duel_battle_data[chat_id][character.ident].turn = False
                     mes = await bot.send_message(chat_id,
                                                  text=f"🔸 Ход {character.name}:",
                                                  reply_markup=inline_builder(character.ability, character.ability,
                                                                              row_width=[2, 2]),
                                                  parse_mode=ParseMode.HTML)
-                    character.b_round += 1
-                    r_character.b_round += 1
-                    duel_user_data[chat_id][r_character.ident][r_character.b_round - 1] = True  # Обновляем состояние
-                    duel_user_data[chat_id][character.ident][character.b_round - 1] = True  # Обновляем состояние
+                    character.round += 1
+                    r_character.round += 1
+                    duel_user_data[chat_id][r_character.ident][r_character.round - 1] = True  # Обновляем состояние
+                    duel_user_data[chat_id][character.ident][character.round - 1] = True  # Обновляем состояние
                     # Инициализируем состояние пользователя
-                    duel_user_data[chat_id][user_id][character.b_round] = False
+                    duel_user_data[chat_id][user_id][character.round] = False
                     # Запускаем таймер
-                    await duel_timeout(chat_id, character.ident, character.b_round, mes)
+                    await duel_timeout(chat_id, character.ident, character.round, mes)
 
             if character.health <= 0 and r_character.health <= 0:
                 del request_data[chat_id]
@@ -341,7 +341,7 @@ async def duel_battle(callback: CallbackQuery, bot: Bot):
                 )
 
             elif character.health <= 0:
-                if character.b_round != r_character.b_round:
+                if character.round != r_character.round:
                     del request_data[chat_id]
                     universe = rival['universe']
                     character = rival['character'][rival['universe']]
@@ -354,7 +354,7 @@ async def duel_battle(callback: CallbackQuery, bot: Bot):
                         await bot.send_animation(chat_id=chat_id, animation=avatar,
                                                  caption=f"👑 {r_character.name} Победил")
 
-                    await mongodb.insert_win(rival["_id"], rival["_id"], r_character.p_name)
+                    await mongodb.insert_win(rival["_id"], rival["_id"], r_character.player_nick_name)
 
                     await mongodb.update_many(
                         {"_id": {"$in": [account["_id"], character.rid]}},
@@ -365,7 +365,7 @@ async def duel_battle(callback: CallbackQuery, bot: Bot):
                     await send_round_photo()
 
             elif r_character.health <= 0:
-                if character.b_round != r_character.b_round:
+                if character.round != r_character.round:
                     del request_data[chat_id]
                     universe = account['universe']
                     character = account['character'][account['universe']]
@@ -383,7 +383,7 @@ async def duel_battle(callback: CallbackQuery, bot: Bot):
                         {"$set": {"battle.battle.status": 0, "battle.battle.rid": ""}}
                     )
 
-                    await mongodb.insert_win(rival["_id"], account["_id"], character.p_name)
+                    await mongodb.insert_win(rival["_id"], account["_id"], character.player_nick_name)
 
                 else:
                     await send_round_photo()

@@ -146,8 +146,11 @@ async def input_user(user_id: int, name, universe, character, power):
     await db.users.insert_one(data)
 
 
+async def update_ops(user_id: int, ops: dict):
+    return await db.users.update_one({"_id": user_id}, ops)
+
 # Защита от подставных битв
-async def add_recent_opponent(user_id: int, opponent_id: int, limit: int = 6):
+async def add_recent_opponent(user_id: int, opponent_id: int, limit: int = 1):
     await db.users.update_one(
         {"_id": user_id},
         {

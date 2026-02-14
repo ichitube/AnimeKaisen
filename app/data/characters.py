@@ -2,6 +2,8 @@ import asyncio
 import inspect
 import random
 
+from collections import Counter
+
 from app.data import character_photo
 from app.keyboards.builders import abilities_kb
 
@@ -75,7 +77,7 @@ def bash(player, points):
 
 
 def undo_bash(player, _):
-    player.stun = 0  # возвращаем атаку к исходному значению
+    pass # возвращаем атаку к исходному значению
 
 
 def immunity(player, _):
@@ -244,7 +246,7 @@ async def undo_minazuki(player, bot):
 
 
 async def undo_g(player, bot):
-    player.add_passive(Passive("✖️ Гецуга", bash, undo_bash, 5, 1, apply_once=True))
+    player.add_passive(Passive("✖️ Гецуга", bash, undo_bash, 5, 5, apply_once=True))
     player.add_passive(Passive("⇩🛡⇩", decrease_defense, return_defense, 5, points=player.defense, apply_once=True))
     player.add_passive(Passive("⇩🗡⇩", decrease_attack, return_attack, 5, points=player.attack, apply_once=True))
     player.add_passive(Passive("✖️ Гецуга", fix_effects, undo_gg, 5, bot, apply_once=True))
@@ -279,10 +281,10 @@ class Passive:
 
 
 class Character:
-    def __init__(self, ident, p_name, name, strength, agility, intelligence,
-                 ability, b_round, b_turn, rid, slave, chat_id):
+    def __init__(self, ident, player_nick_name, name, strength, agility, intelligence,
+                 ability, round, turn, rid, slave, chat_id):
         self.ident = ident
-        self.p_name = p_name
+        self.player_nick_name = player_nick_name
         self.name = name
         self.strength = strength
         self.agility = agility
@@ -291,6 +293,7 @@ class Character:
         self.stun = 0
         self.passives = []
         self.passive_names = []
+        self.passive_counts = Counter()
         self.health = strength * 100
         self.attack = strength + agility + (intelligence // 2)
         self.defense = (strength + agility + (intelligence // 2)) // 4
@@ -298,8 +301,8 @@ class Character:
         self.crit_dmg = strength + (agility // 2) + (intelligence // 4)
         self.crit_ch = agility + (strength // 2) + (intelligence // 4)
         self.ability = ability
-        self.b_round = b_round
-        self.b_turn = b_turn
+        self.round = round
+        self.turn = turn
         self.rid = rid
         self.pre_hp = self.health
         self.initial_skills = ability.copy()
@@ -316,25 +319,30 @@ class Character:
 
     def add_passive(self, passive):
         self.passives.append(passive)
+        self.passive_counts[passive.name] += 1
         if passive.name not in self.passive_names:
             self.passive_names.append(passive.name)
 
     def update_passives(self):
         expired = []
-
         for passive in self.passives:
             passive.apply_effect(self)
             if passive.duration <= 0:
                 expired.append(passive)
 
         for passive in expired:
+            # undo
             if inspect.iscoroutinefunction(passive.undo_effect):
                 asyncio.create_task(passive.undo_effect(self, passive.points))
             else:
                 passive.undo_effect(self, passive.points)
 
-            if passive.name in self.passive_names:
-                self.passive_names.remove(passive.name)
+            # counts
+            self.passive_counts[passive.name] -= 1
+            if self.passive_counts[passive.name] <= 0:
+                del self.passive_counts[passive.name]
+                if passive.name in self.passive_names:
+                    self.passive_names.remove(passive.name)
 
             self.passives.remove(passive)
 
@@ -565,7 +573,7 @@ async def turn(self, bot, action, enemy, chat_id, ai=None):
 
         damage = self.attack // 2 + self.intelligence + self.strength + self.agility
 
-        stun = Passive("❄️Заморозка", bash, undo_bash, 2, 1, apply_once=True)
+        stun = Passive("❄️Заморозка", bash, undo_bash, 1, 1, apply_once=True)
 
         enemy.add_passive(stun)
 
@@ -586,7 +594,7 @@ async def turn(self, bot, action, enemy, chat_id, ai=None):
         if not energy:
             return True, False
 
-        stun = Passive("❄️Заморозка", bash, undo_bash, 3, 1, apply_once=True)
+        stun = Passive("❄️Заморозка", bash, undo_bash, 1, 1, apply_once=True)
 
         enemy.add_passive(stun)
 
@@ -645,7 +653,7 @@ async def turn(self, bot, action, enemy, chat_id, ai=None):
 
         damage = self.attack // 2 + self.intelligence + self.strength + self.agility
 
-        stun = Passive("❄️Заморозка", bash, undo_bash, 3, 1)
+        stun = Passive("❄️Заморозка", bash, undo_bash, 3, 3)
         defense_down = Passive("⇩🛡⇩", decrease_defense, increase_defense, 3, 25)
 
         enemy.add_passive(stun)
@@ -745,7 +753,7 @@ async def turn(self, bot, action, enemy, chat_id, ai=None):
 
         damage = self.attack
 
-        stun = Passive("🧊Дизейбл", bash, undo_bash, 4, 1)
+        stun = Passive("🧊Дизейбл", bash, undo_bash, 4, 4)
 
         enemy.add_passive(stun)
 
@@ -786,7 +794,7 @@ async def turn(self, bot, action, enemy, chat_id, ai=None):
 
         damage = self.attack + self.intelligence + self.strength + self.agility
 
-        stun = Passive("🧊Дизейбл", bash, undo_bash, 5, 1)
+        stun = Passive("🧊Дизейбл", bash, undo_bash, 5, 5)
         attack = Passive("Хётен Хяккасо", decrease_hp, fix_effects, 5, damage)
 
         enemy.add_passive(stun)
@@ -985,7 +993,7 @@ async def turn(self, bot, action, enemy, chat_id, ai=None):
         if not mana:
             return False, True
         damage = self.attack
-        stun = Passive("💫", bash, undo_bash, 3, 1, apply_once=True)
+        stun = Passive("💫", bash, undo_bash, 2, 2, apply_once=True)
 
         enemy.add_passive(stun)
         calculate_shield(enemy, damage)
@@ -1062,7 +1070,7 @@ async def turn(self, bot, action, enemy, chat_id, ai=None):
         energy = await calculate_energy(self, 20)
         if not energy:
             return True, False
-        stun = Passive("Печать", bash, undo_bash, 2, 1, apply_once=True)
+        stun = Passive("Печать", bash, undo_bash, 5, 5, apply_once=True)
         enemy.add_passive(stun)
 
         gif = 'CgACAgIAAx0CfstymgACD9dmH2ZlZLnUmXy9xzqlvMIOEtpLHwACwDcAAkXDAAFJHKExH1vAs1c0BA'
@@ -1261,7 +1269,7 @@ async def turn(self, bot, action, enemy, chat_id, ai=None):
         if not mana:
             return False, True
         damage = self.attack + self.intelligence
-        stun = Passive("💫", bash, undo_bash, 3, 1, apply_once=True)
+        stun = Passive("💫", bash, undo_bash, 2, 2, apply_once=True)
 
         enemy.add_passive(stun)
         calculate_shield(enemy, damage)
@@ -1583,7 +1591,7 @@ async def turn(self, bot, action, enemy, chat_id, ai=None):
         if not energy:
             return True, False
 
-        stun = Passive("💫Бакудо", bash, undo_bash, 2, 1, apply_once=True)
+        stun = Passive("💫Бакудо", bash, undo_bash, 2, 2, apply_once=True)
 
         enemy.add_passive(stun)
 
@@ -1619,7 +1627,7 @@ async def turn(self, bot, action, enemy, chat_id, ai=None):
         if not energy:
             return True, False
 
-        stun = Passive("💫Бакудо", bash, undo_bash, 3, 1, apply_once=True)
+        stun = Passive("💫Бакудо", bash, undo_bash, 3, 3, apply_once=True)
 
         enemy.add_passive(stun)
 
@@ -1676,7 +1684,7 @@ async def turn(self, bot, action, enemy, chat_id, ai=None):
         if not energy:
             return True, False
 
-        stun = Passive("❄️Заморозка", bash, undo_bash, 3, 1, apply_once=True)
+        stun = Passive("❄️Заморозка", bash, undo_bash, 1, 1, apply_once=True)
         damage = (self.attack + self.intelligence + self.strength + self.agility) * 2
 
         calculate_shield(enemy, damage)
@@ -1718,7 +1726,7 @@ async def turn(self, bot, action, enemy, chat_id, ai=None):
         if not energy:
             return True, False
 
-        stun = Passive("❄️Заморозка", bash, undo_bash, 5, 1, apply_once=True)
+        stun = Passive("❄️Заморозка", bash, undo_bash, 5, 5, apply_once=True)
         damage = (self.attack + self.intelligence + self.strength + self.agility) * 5
         attack_up = Passive("⇪🗡", increase_attack, decrease_attack, 5, 400, apply_once=True)
         dec_def = Passive("⇩🛡", decrease_defense, increase_defense, 5, 500, apply_once=True)
@@ -1811,7 +1819,7 @@ async def turn(self, bot, action, enemy, chat_id, ai=None):
         if not energy:
             return True, False
 
-        stun = Passive("💫", bash, undo_bash, 3, 1, apply_once=True)
+        stun = Passive("💫", bash, undo_bash, 1, 1, apply_once=True)
         damage = self.attack + self.intelligence + self.strength + self.agility
 
         calculate_shield(enemy, damage)
@@ -1897,7 +1905,7 @@ async def turn(self, bot, action, enemy, chat_id, ai=None):
             return True, False
 
         damage = self.attack * 2 + self.intelligence * 3
-        stun = Passive("🗡💫", bash, undo_bash, 2, 1, apply_once=True)
+        stun = Passive("🗡💫", bash, undo_bash, 2, 2, apply_once=True)
 
         calculate_shield(enemy, damage)
         enemy.add_passive(stun)
@@ -2009,7 +2017,7 @@ async def turn(self, bot, action, enemy, chat_id, ai=None):
             return True, False
 
         damage = self.attack * 4 + self.intelligence * 3
-        stun = Passive("💫", bash, undo_bash, 3, 1, apply_once=True)
+        stun = Passive("💫", bash, undo_bash, 1, 1, apply_once=True)
 
         enemy.add_passive(stun)
         calculate_shield(enemy, damage)
@@ -2316,7 +2324,7 @@ async def turn(self, bot, action, enemy, chat_id, ai=None):
 
         damage = self.attack + self.intelligence
 
-        stun = Passive("⚡Паралич", bash, undo_bash, 2, 1, apply_once=True)
+        stun = Passive("⚡Паралич", bash, undo_bash, 2, 2, apply_once=True)
         enemy.add_passive(stun)
 
         calculate_shield(enemy, damage)
@@ -2721,7 +2729,7 @@ async def turn(self, bot, action, enemy, chat_id, ai=None):
 
         del_defense = Passive("✇", decrease_defense, fix_effects, 5, enemy.defense, apply_once=True)
         dmg = Passive("🗡", decrease_energy, fix_effects, 5, energy)
-        stun = Passive("❟❛❟Гендзюцу", bash, undo_bash, 5, 1, apply_once=True)
+        stun = Passive("❟❛❟Гендзюцу", bash, undo_bash, 5, 5, apply_once=True)
         enemy.add_passive(stun)
         enemy.add_passive(del_defense)
         enemy.add_passive(dmg)
@@ -2928,7 +2936,7 @@ async def turn(self, bot, action, enemy, chat_id, ai=None):
             return True, False
 
         damage = self.attack * 5 + self.intelligence * 5
-        stun = Passive("⚡💫", bash, undo_bash, 2, 1, apply_once=True)
+        stun = Passive("⚡💫", bash, undo_bash, 2, 2, apply_once=True)
 
         calculate_shield(enemy, damage)
         enemy.add_passive(stun)
@@ -2987,7 +2995,7 @@ async def turn(self, bot, action, enemy, chat_id, ai=None):
         damage = self.agility + self.strength + self.intelligence
 
         damage = Passive("🐶🗡", decrease_hp, fix_effects, 3, damage, apply_once=True)
-        stun = Passive("🐶💫", bash, undo_bash, 3, 1, apply_once=True)
+        stun = Passive("🐶💫", bash, undo_bash, 3, 3, apply_once=True)
 
         enemy.add_passive(damage)
         enemy.add_passive(stun)
@@ -3504,7 +3512,7 @@ async def turn(self, bot, action, enemy, chat_id, ai=None):
         if not energy:
             return True, False
 
-        stun = Passive("🌺🌱💫", bash, undo_bash, 4, 1, apply_once=True)
+        stun = Passive("🌺🌱💫", bash, undo_bash, 4, 4, apply_once=True)
         dec_eng = Passive("⇩🪫", decrease_energy, fix_effects, 6, 15, apply_once=True)
         dec_mana = Passive("⇩🧪", decrease_mana, fix_effects, 6, 25, apply_once=True)
 
@@ -3901,7 +3909,7 @@ async def turn(self, bot, action, enemy, chat_id, ai=None):
         energy = await calculate_energy(self, 25)
         if not energy:
             return True, False
-        stun = Passive("🐇🐰💫", bash, undo_bash, 3, 1, apply_once=True)
+        stun = Passive("🐇🐰💫", bash, undo_bash, 3, 3, apply_once=True)
 
         enemy.add_passive(stun)
 
@@ -3937,7 +3945,7 @@ async def turn(self, bot, action, enemy, chat_id, ai=None):
             return True, False
 
         damage = Passive("🐸🪽🗡", decrease_hp, fix_effects, 3, self.intelligence)
-        stun = Passive("🐸🪽💫", bash, undo_bash, 2, 1, apply_once=True)
+        stun = Passive("🐸🪽💫", bash, undo_bash, 3, 3, apply_once=True)
 
         enemy.add_passive(damage)
         enemy.add_passive(stun)
@@ -3981,7 +3989,7 @@ async def turn(self, bot, action, enemy, chat_id, ai=None):
         damage = (self.agility + self.strength + self.intelligence) * 2
 
         damage = Passive("🐍🗡", decrease_hp, fix_effects, 4, damage)
-        stun = Passive("🐍💫", bash, undo_bash, 4, 1, apply_once=True)
+        stun = Passive("🐍💫", bash, undo_bash, 4, 4, apply_once=True)
 
         enemy.add_passive(damage)
         enemy.add_passive(stun)
@@ -4159,7 +4167,7 @@ async def turn(self, bot, action, enemy, chat_id, ai=None):
         if not energy:
             return True, False
 
-        stun = Passive("🗣📢💫", bash, undo_bash, 5, 1, apply_once=True)
+        stun = Passive("🗣📢💫", bash, undo_bash, 5, 5, apply_once=True)
         damage = self.intelligence * 5 + self.attack
         calculate_shield(enemy, damage)
 
@@ -4237,7 +4245,7 @@ async def turn(self, bot, action, enemy, chat_id, ai=None):
 
         damage = self.intelligence * 3 + self.attack
 
-        stun = Passive("💫", bash, undo_bash, 3, 1, apply_once=True)
+        stun = Passive("💫", bash, undo_bash, 3, 3, apply_once=True)
         calculate_shield(enemy, damage)
 
         enemy.add_passive(stun)
@@ -4259,7 +4267,7 @@ async def turn(self, bot, action, enemy, chat_id, ai=None):
         damage = self.agility + self.strength + self.intelligence * 2
 
         damage = Passive("🪱", decrease_hp, fix_effects, 3, damage, apply_once=True)
-        stun = Passive("💫", bash, undo_bash, 2, 1, apply_once=True)
+        stun = Passive("💫", bash, undo_bash, 3, 3, apply_once=True)
 
         enemy.add_passive(damage)
         enemy.add_passive(stun)
@@ -4293,7 +4301,7 @@ async def turn(self, bot, action, enemy, chat_id, ai=None):
         damage = (self.agility + self.strength + self.intelligence) * 2
 
         damage = Passive("🐉", decrease_hp, fix_effects, 5, damage, apply_once=True)
-        stun = Passive("💫", bash, undo_bash, 3, 1, apply_once=True)
+        stun = Passive("💫", bash, undo_bash, 5, 5, apply_once=True)
 
         enemy.add_passive(damage)
         enemy.add_passive(stun)
@@ -4331,7 +4339,7 @@ async def turn(self, bot, action, enemy, chat_id, ai=None):
         damage = (self.agility + self.strength + self.intelligence) * 3
 
         damage = Passive("🕳🪱", decrease_hp, fix_effects, 5, damage, apply_once=True)
-        stun = Passive("🪱💫", bash, undo_bash, 4, 1, apply_once=True)
+        stun = Passive("🪱💫", bash, undo_bash, 5, 5, apply_once=True)
 
         enemy.add_passive(damage)
         enemy.add_passive(stun)

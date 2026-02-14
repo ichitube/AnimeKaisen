@@ -212,7 +212,7 @@ async def search_opponent(callback: CallbackQuery | Message, bot: Bot):
                                          reply_markup=reply_builder("🏴‍☠️ Сдаться"))
 
             await bot.send_message(account["_id"], text="⏳ Ход соперника")
-            mes = await bot.send_message(rival["_id"], text=f".               ˗ˋˏ<tg-emoji emoji-id="5215480011322042129">❌</tg-emoji> Раунд {rb_character.b_round}ˎˊ˗"
+            mes = await bot.send_message(rival["_id"], text=f".               ˗ˋˏ<tg-emoji emoji-id="5215480011322042129">❌</tg-emoji> Раунд {rb_character.round}ˎˊ˗"
                                                             # f"\n✧•───────────────────────•✧"
                                                             f"\n<blockquote expandable>{account_text(rb_character)}</blockquote>"
                                                             # f"\n✧•──────────────•✧"
@@ -223,11 +223,11 @@ async def search_opponent(callback: CallbackQuery | Message, bot: Bot):
                                          reply_markup=inline_builder(r_ability, r_ability, row_width=[2, 2]),
                                          parse_mode=ParseMode.HTML)
             # Инициализируем состояние пользователя
-            user_data[rival["_id"]] = {rb_character.b_round: False}
-            user_data[user_id] = {b_character.b_round: True}
+            user_data[rival["_id"]] = {rb_character.round: False}
+            user_data[user_id] = {b_character.round: True}
 
             # Запускаем таймер
-            await surrender_f(rival["_id"], rb_character.b_round, mes, bot)
+            await surrender_f(rival["_id"], rb_character.round, mes, bot)
 
     elif account["battle"]["battle"]["status"] == 1:
         if isinstance(callback, CallbackQuery):
@@ -328,14 +328,14 @@ async def battle(callback: CallbackQuery, bot: Bot):
         return
 
     # Уже ходил в этом раунде (локальная защита UI)
-    if character.b_turn:
+    if character.turn:
         await bot.send_message(user_id, "✖️ Вы уже сделали ход!")
         return
 
     # --- ИДЕМПОТЕНТНОСТЬ НА РАУНД ---
     # Один валидный ход на пользователя за раунд. Повторные клики — игнор.
     rid = account["battle"]["battle"].get("rid")
-    round_ = character.b_round
+    round_ = character.round
     op_id = f"pvp:{rid}:{round_}:{user_id}"
 
     is_first = await mongodb.claim_once(op_id, user_id, ttl_sec=120)
@@ -379,14 +379,14 @@ async def battle(callback: CallbackQuery, bot: Bot):
 
     async def send_round_photo():
         if r_character.stun == 0:
-            character.b_round += 1
-            battle_data[r_character.ident].b_turn = False
-            battle_data[character.ident].b_turn = True
+            character.round += 1
+            battle_data[r_character.ident].turn = False
+            battle_data[character.ident].turn = True
 
             if r_character.ident != character.ident * 10:
                 mes = await bot.send_message(
                     r_character.ident,
-                    text=f".               ˗ˋˏ<tg-emoji emoji-id="5215480011322042129">❌</tg-emoji> Раунд {r_character.b_round}ˎˊ˗"
+                    text=f".               ˗ˋˏ<tg-emoji emoji-id="5215480011322042129">❌</tg-emoji> Раунд {r_character.round}ˎˊ˗"
                          f"\n<blockquote expandable>{account_text(r_character)}</blockquote>"
                          # f"\n✧•──────────────•✧"
                          f"\n➖➖➖➖➖➖➖➖➖➖➖"
@@ -401,21 +401,21 @@ async def battle(callback: CallbackQuery, bot: Bot):
                 await asyncio.sleep(1)
                 mes = None
 
-            user_data[user_id][character.b_round - 1] = True
-            user_data[r_character.ident][r_character.b_round] = False
+            user_data[user_id][character.round - 1] = True
+            user_data[r_character.ident][r_character.round] = False
 
             if r_character.ident != character.ident * 10:
-                await surrender_f(r_character.ident, r_character.b_round, mes, bot)
+                await surrender_f(r_character.ident, r_character.round, mes, bot)
         else:
-            character.b_round += 1
-            r_character.b_round += 1
-            battle_data[character.rid].b_turn = True
-            battle_data[character.ident].b_turn = False
+            character.round += 1
+            r_character.round += 1
+            battle_data[character.rid].turn = True
+            battle_data[character.ident].turn = False
 
             if r_character.ident != character.ident * 10:
                 await bot.send_message(
                     r_character.ident,
-                    text=f".               ˗ˋˏ<tg-emoji emoji-id="5215480011322042129">❌</tg-emoji> Раунд {r_character.b_round - 1}ˎˊ˗"
+                    text=f".               ˗ˋˏ<tg-emoji emoji-id="5215480011322042129">❌</tg-emoji> Раунд {r_character.round - 1}ˎˊ˗"
                          f"\n<blockquote expandable>{account_text(r_character)}</blockquote>"
                          # f"\n✧•──────────────•✧"
                          f"\n➖➖➖➖➖➖➖➖➖➖➖"
@@ -426,7 +426,7 @@ async def battle(callback: CallbackQuery, bot: Bot):
 
             mes = await bot.send_message(
                 user_id,
-                text=f".               ˗ˋˏ<tg-emoji emoji-id="5215480011322042129">❌</tg-emoji> Раунд {character.b_round}ˎˊ˗"
+                text=f".               ˗ˋˏ<tg-emoji emoji-id="5215480011322042129">❌</tg-emoji> Раунд {character.round}ˎˊ˗"
                      f"\n<blockquote expandable>{account_text(character)}</blockquote>"
                      # f"\n✧•──────────────•✧"
                      f"\n➖➖➖➖➖➖➖➖➖➖➖"
@@ -436,13 +436,13 @@ async def battle(callback: CallbackQuery, bot: Bot):
                 parse_mode=ParseMode.HTML
             )
 
-            user_data[r_character.ident][r_character.b_round - 1] = True
-            user_data[character.ident][character.b_round - 1] = True
-            user_data[user_id][character.b_round] = False
+            user_data[r_character.ident][r_character.round - 1] = True
+            user_data[character.ident][character.round - 1] = True
+            user_data[user_id][character.round] = False
 
             if r_character.ident != character.ident * 10:
                 await bot.send_message(chat_id=r_character.ident, text="⏳ Ход соперника")
-                await surrender_f(character.ident, character.b_round, mes, bot)
+                await surrender_f(character.ident, character.round, mes, bot)
 
     # ----- дальше оставляю твою исходную логику финалов/раундов -----
     if character.health <= 0 and r_character.health <= 0:
@@ -473,7 +473,7 @@ async def battle(callback: CallbackQuery, bot: Bot):
             user_data.pop(character.rid, None)
 
     elif character.health <= 0:
-        if character.b_round != r_character.b_round:
+        if character.round != r_character.round:
             await bot.send_animation(chat_id=user_id, animation=lose_animation,
                                      caption=lose_text, reply_markup=menu_button())
             if r_character.ident != character.ident * 10:
@@ -503,7 +503,7 @@ async def battle(callback: CallbackQuery, bot: Bot):
             await send_round_photo()
 
     elif r_character.health <= 0:
-        if character.b_round != r_character.b_round:
+        if character.round != r_character.round:
             await bot.send_animation(chat_id=user_id, animation=win_animation,
                                      caption=win_text, reply_markup=menu_button())
             if r_character.ident != character.ident * 10:
