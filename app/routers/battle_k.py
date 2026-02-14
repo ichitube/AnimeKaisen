@@ -20,10 +20,29 @@ lose_animation = "CgACAgIAAx0CfstymgACU79phx1P2AbZPMsRGLMAAdL0Qd5c87wAAj2MAAIGgT
 draw_animation = "CgACAgQAAx0CfstymgACU8tphx2kMdBisOdfwnspIHL49_y_HAACxwcAAh8stFOn_pYtCKSEoToE"
 
 
+win_ai_text = ('<tg-emoji emoji-id="5465465194056525619">❌</tg-emoji>Победа: <tg-emoji emoji-id="5463186335948878489">❌</tg-emoji>Соперник мертв"'
+                     '\n<blockquote expandable>── •✧✧• ──────────'
+                     '\n  + 30<tg-emoji emoji-id="5380033625909634211">❌</tg-emoji> xp, '
+                     '\n  + 50<tg-emoji emoji-id="5201873447554145566">❌</tg-emoji> ¥</blockquote>')
+
+
+lose_ai_text = ('<tg-emoji emoji-id="5463186335948878489">❌</tg-emoji>Поражение'
+                    '\n<blockquote expandable>── •✧✧• ──────────'
+                    '\n  + 10<tg-emoji emoji-id="5380033625909634211">❌</tg-emoji> xp, '
+                    '\n  + 20<tg-emoji emoji-id="5201873447554145566">❌</tg-emoji> ¥</blockquote>')
+
+
+draw_ai_text = ('<tg-emoji emoji-id="5465465194056525619">❌</tg-emoji>Ничья'
+                '\n<blockquote expandable>── •✧✧• ──────────'
+                '\n  + 20<tg-emoji emoji-id="5380033625909634211">❌</tg-emoji> xp, '
+                '\n  + 35<tg-emoji emoji-id="5201873447554145566">❌</tg-emoji> ¥</blockquote>')
+
+
 win_text = ('<tg-emoji emoji-id="5465465194056525619">❌</tg-emoji>Победа: <tg-emoji emoji-id="5463186335948878489">❌</tg-emoji>Соперник мертв"'
             '\n<blockquote expandable>── •✧✧• ──────────'
             '\n  + 100<tg-emoji emoji-id="5380033625909634211">❌</tg-emoji> xp, '
             '\n  + 200<tg-emoji emoji-id="5201873447554145566">❌</tg-emoji> ¥</blockquote>')
+
 
 lose_text = ('<tg-emoji emoji-id="5463186335948878489">❌</tg-emoji>Поражение'
              '\n<blockquote expandable>── •✧✧• ──────────'
@@ -35,12 +54,18 @@ draw_text = ('<tg-emoji emoji-id="5465465194056525619">❌</tg-emoji>Ничья'
              '\n  + 80<tg-emoji emoji-id="5380033625909634211">❌</tg-emoji> xp, '
              '\n  + 150<tg-emoji emoji-id="5201873447554145566">❌</tg-emoji> ¥</blockquote>')
 
-surrender_text = '<tg-emoji emoji-id="5316560584869690299">❌</tg-emoji> Поражение'
+
+surrender_text = ('<tg-emoji emoji-id="5316560584869690299">❌</tg-emoji> Поражение'
+                  '\n<blockquote expandable>── •✧✧• ──────────'
+                  '\n  + 0<tg-emoji emoji-id="5380033625909634211">❌</tg-emoji> xp, '
+                  '\n  + 0<tg-emoji emoji-id="5201873447554145566">❌</tg-emoji> ¥</blockquote>')
+
 
 surrender_r_text = ('<tg-emoji emoji-id="5465465194056525619">❌</tg-emoji>Победа: <tg-emoji emoji-id="5316560584869690299">❌</tg-emoji>Соперник сдался'
                     '\n<blockquote expandable>── •✧✧• ──────────'
                     '\n  + 100<tg-emoji emoji-id="5380033625909634211">❌</tg-emoji> xp, '
                     '\n  + 200<tg-emoji emoji-id="5201873447554145566">❌</tg-emoji> ¥</blockquote>')
+
 
 time_out_text = ('<tg-emoji emoji-id="5465465194056525619">❌</tg-emoji>Победа: <tg-emoji emoji-id="5462990652943904884">❌</tg-emoji>Соперник афк'
                  '\n<blockquote expandable>── •✧✧• ──────────'
@@ -486,9 +511,11 @@ async def battle_message(message: Message, bot: Bot):
 
     # === ПРОВЕРКА СМЕРТИ СРАЗУ ПОСЛЕ УДАРА ===
     if character.health <= 0 or rival_character.health <= 0:
-        if character.round == rival_character.round:
-            await mongodb.db.once.delete_one({"_id": lock_id})
-        return
+        # В PvE (AI) НЕ выходим — пусть отработают финалы ниже
+        if rival_character.ident != character.ident * 10:
+            if character.round == rival_character.round:
+                await mongodb.db.once.delete_one({"_id": lock_id})
+            return
 
     if not mana or not energy:
         await mongodb.db.once.delete_one({"_id": lock_id})
@@ -557,10 +584,29 @@ async def battle_message(message: Message, bot: Bot):
 
     # ЕСЛИ ХОД ПЕРЕДАН AI — ЗАПУСКАЕМ ЕГО
     if rival_character.ident == character.ident * 10:
+        fresh = await mongodb.get_user(user_id)
+        fresh_battle = fresh.get("battle", {}).get("battle", {})
+
+        # если из-за оглушения ход остался у игрока — НЕ вызываем ai(), а показываем клавиатуру
+        if fresh_battle.get("turn") != rival_character.ident:
+            await bot.send_message(
+                chat_id=user_id,
+                text='\n<tg-emoji emoji-id="5449372823476777969">❌</tg-emoji> Ваш ход:',
+                reply_markup=abilities_kb(
+                    character.ability,
+                    hp=character.health,
+                    mana=character.mana,
+                    energy=character.energy
+                )
+            )
+            await mongodb.db.once.delete_one({"_id": lock_id})
+            return
+
         ai_character = battle_data.get(rival_character.ident)
         if ai_character:
             await asyncio.sleep(1)
-            await ai(ai_character, bot, None, account)
+            await ai(ai_character, bot, None, fresh)
+
         await mongodb.db.once.delete_one({"_id": lock_id})
         return
 
@@ -648,24 +694,37 @@ async def battle_message(message: Message, bot: Bot):
 
     now = datetime.utcnow()
 
-    # ----- ВАША ИСХОДНАЯ ЛОГИКА ФИНАЛОВ/РАУНДОВ -----
+    # ----- ФИНАЛЫ / РЕЗУЛЬТАТ -----
+    # ВАЖНО: в PvE (AI = user_id*10) обновляем ТОЛЬКО игрока, потому что AI нет в БД.
+
+    is_ai = (rival_character.ident == character.ident * 10)
+
     if character.health <= 0 and rival_character.health <= 0:
         if character.round == rival_character.round:
             await mongodb.db.once.delete_one({"_id": lock_id})
 
+            # сообщения
+            caption = draw_ai_text if is_ai else draw_text
+
             await bot.send_animation(
                 chat_id=user_id,
                 animation=draw_animation,
-                caption=draw_text,
+                caption=caption,
                 reply_markup=menu_button()
             )
-            if rival_character.ident != character.ident * 10:
+            if not is_ai:
                 await bot.send_animation(
-                    chat_id=rival_character,
+                    chat_id=rival_character.ident,
                     animation=draw_animation,
                     caption=draw_text,
                     reply_markup=menu_button()
                 )
+
+            # награды
+            if is_ai:
+                inc_user = {"battle.stats.ties": 1, "stats.exp": 20, "account.money": 35}
+            else:
+                inc_user = {"battle.stats.ties": 1, "stats.exp": 80, "account.money": 150}
 
             await mongodb.update_ops(account["_id"], {
                 "$set": {
@@ -674,18 +733,11 @@ async def battle_message(message: Message, bot: Bot):
                     "battle.battle.rid": "",
                     "tasks.last_arena_fight": now,
                 },
-                "$inc": {
-                    "battle.stats.ties": 1,
-                    "stats.exp": 80,
-                    "account.money": 150,
-                }
+                "$inc": inc_user
             })
 
-            await mongodb.update_ops(rival_character.ident, {
-                "$set": {"battle.battle.finished": True}  # если тебе нужно отдельно — но можно тоже всё сразу
-            })
-
-            if rival_character.ident != character.ident * 10:
+            # PvP: обновляем соперника, PvE: НЕ трогаем AI
+            if not is_ai:
                 await mongodb.update_ops(character.rid, {
                     "$set": {
                         "battle.battle.finished": True,
@@ -693,18 +745,13 @@ async def battle_message(message: Message, bot: Bot):
                         "battle.battle.rid": "",
                         "tasks.last_arena_fight": now,
                     },
-                    "$inc": {
-                        "battle.stats.ties": 1,
-                        "stats.exp": 80,
-                        "account.money": 150,
-                    }
+                    "$inc": {"battle.stats.ties": 1, "stats.exp": 80, "account.money": 150}
                 })
-
                 battle_data.pop(character.rid, None)
             else:
                 battle_data.pop(character.ident * 10, None)
-            battle_data.pop(account["_id"], None)
 
+            battle_data.pop(account["_id"], None)
         else:
             await asyncio.sleep(1)
             await send_round_photo()
@@ -713,19 +760,26 @@ async def battle_message(message: Message, bot: Bot):
         if character.round == rival_character.round:
             await mongodb.db.once.delete_one({"_id": lock_id})
 
+            caption = lose_ai_text if is_ai else lose_text
+
             await bot.send_animation(
                 chat_id=user_id,
                 animation=lose_animation,
-                caption=lose_text,
+                caption=caption,
                 reply_markup=menu_button()
             )
-            if rival_character.ident != character.ident * 10:
+            if not is_ai:
                 await bot.send_animation(
                     chat_id=character.rid,
                     animation=lose_animation,
                     caption=win_text,
                     reply_markup=menu_button()
                 )
+
+            if is_ai:
+                inc_user = {"battle.stats.loses": 1, "stats.exp": 10, "account.money": 20}
+            else:
+                inc_user = {"battle.stats.loses": 1, "stats.exp": 55, "account.money": 100}
 
             await mongodb.update_ops(account["_id"], {
                 "$set": {
@@ -734,14 +788,10 @@ async def battle_message(message: Message, bot: Bot):
                     "battle.battle.rid": "",
                     "tasks.last_arena_fight": now,
                 },
-                "$inc": {
-                    "battle.stats.loses": 1,
-                    "stats.exp": 55,
-                    "account.money": 100,
-                }
+                "$inc": inc_user
             })
 
-            if rival_character.ident != character.ident * 10:
+            if not is_ai:
                 await mongodb.update_ops(character.rid, {
                     "$set": {
                         "battle.battle.finished": True,
@@ -749,18 +799,13 @@ async def battle_message(message: Message, bot: Bot):
                         "battle.battle.rid": "",
                         "tasks.last_arena_fight": now,
                     },
-                    "$inc": {
-                        "battle.stats.wins": 1,
-                        "stats.exp": 100,
-                        "account.money": 200,
-                    }
+                    "$inc": {"battle.stats.wins": 1, "stats.exp": 100, "account.money": 200}
                 })
-
                 battle_data.pop(character.rid, None)
             else:
                 battle_data.pop(character.ident * 10, None)
-            battle_data.pop(account["_id"], None)
 
+            battle_data.pop(account["_id"], None)
         else:
             await asyncio.sleep(1)
             await send_round_photo()
@@ -769,19 +814,26 @@ async def battle_message(message: Message, bot: Bot):
         if character.round == rival_character.round:
             await mongodb.db.once.delete_one({"_id": lock_id})
 
+            caption = win_ai_text if is_ai else win_text
+
             await bot.send_animation(
                 chat_id=user_id,
                 animation=win_animation,
-                caption=win_text,
+                caption=caption,
                 reply_markup=menu_button()
             )
-            if rival_character.ident != character.ident * 10:
+            if not is_ai:
                 await bot.send_animation(
                     chat_id=character.rid,
                     animation=lose_animation,
                     caption=lose_text,
                     reply_markup=menu_button()
                 )
+
+            if is_ai:
+                inc_user = {"battle.stats.wins": 1, "stats.exp": 30, "account.money": 50}
+            else:
+                inc_user = {"battle.stats.wins": 1, "stats.exp": 100, "account.money": 200}
 
             await mongodb.update_ops(account["_id"], {
                 "$set": {
@@ -790,14 +842,10 @@ async def battle_message(message: Message, bot: Bot):
                     "battle.battle.rid": "",
                     "tasks.last_arena_fight": now,
                 },
-                "$inc": {
-                    "battle.stats.wins": 1,
-                    "stats.exp": 100,
-                    "account.money": 200,
-                }
+                "$inc": inc_user
             })
 
-            if rival_character.ident != character.ident * 10:
+            if not is_ai:
                 await mongodb.update_ops(character.rid, {
                     "$set": {
                         "battle.battle.finished": True,
@@ -805,18 +853,13 @@ async def battle_message(message: Message, bot: Bot):
                         "battle.battle.rid": "",
                         "tasks.last_arena_fight": now,
                     },
-                    "$inc": {
-                        "battle.stats.loses": 1,
-                        "stats.exp": 55,
-                        "account.money": 100,
-                    }
+                    "$inc": {"battle.stats.loses": 1, "stats.exp": 55, "account.money": 100}
                 })
-
                 battle_data.pop(character.rid, None)
             else:
                 battle_data.pop(character.ident * 10, None)
-            battle_data.pop(account["_id"], None)
 
+            battle_data.pop(account["_id"], None)
         else:
             await asyncio.sleep(1)
             await send_round_photo()
@@ -824,3 +867,4 @@ async def battle_message(message: Message, bot: Bot):
     else:
         await asyncio.sleep(1)
         await send_round_photo()
+
