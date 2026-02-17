@@ -140,7 +140,7 @@ async def tokio(callback: CallbackQuery | Message):
                 f'\n<tg-emoji emoji-id="5195286329226706640">❌</tg-emoji><tg-emoji emoji-id="5195102113784414350">❌</tg-emoji><tg-emoji emoji-id="5195102113784414350">❌</tg-emoji><tg-emoji emoji-id="5194920707250733601">❌</tg-emoji><tg-emoji emoji-id="5197235750457849674">❌</tg-emoji><tg-emoji emoji-id="5195263548720168749">❌</tg-emoji><tg-emoji emoji-id="5195017764921687102">❌</tg-emoji><tg-emoji emoji-id="5195102113784414350">❌</tg-emoji><tg-emoji emoji-id="5195102113784414350">❌</tg-emoji><tg-emoji emoji-id="5195439792703162670">❌</tg-emoji>'
                 f'\n<tg-emoji emoji-id="5415624997689381048">❌</tg-emoji> Добро пожаловать в мир'
                 '\n<blockquote><tg-emoji emoji-id="5206198853283377523">❌</tg-emoji> Захватывающие битвы!'
-                '\n<tg-emoji emoji-id="5399908355143645853">❌</tg-emoji> Собирай персонажей '
+                '\n<tg-emoji emoji-id="5399908355143645853">❌</tg-emoji> Собирай персонажей! '
                 '\n<tg-emoji emoji-id="5201665489532638627">❌</tg-emoji> Сражайся с противниками'
                 '\n<tg-emoji emoji-id="5435976794710754668">❌</tg-emoji> Навыки из аниме в боях'
                 '\n<tg-emoji emoji-id="5474616880306077288">❌</tg-emoji>Придумай свою стратегию <tg-emoji emoji-id="5474237454305214364">❌</tg-emoji>'
