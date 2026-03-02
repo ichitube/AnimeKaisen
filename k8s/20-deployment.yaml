@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: animekaisen-bot
+  namespace: animekaisen
+  labels:
+    app: animekaisen
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: animekaisen
+  template:
+    metadata:
+      labels:
+        app: animekaisen
+    spec:
+      imagePullSecrets:
+        - name: gitlab-regcred
+      containers:
+        - name: bot
+          image: registry.gitlab.com/ichifirstgonumber/animekaisen:__TAG__
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - secretRef:
+                name: animekaisen-env
+          env:
+            - name: METRICS_PORT
+              value: "8000"
+          ports:
+            - name: metrics
+              containerPort: 8000
+          readinessProbe:
+            httpGet:
+              path: /metrics
+              port: metrics
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /metrics
+              port: metrics
+            initialDelaySeconds: 15
+            periodSeconds: 20

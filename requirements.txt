@@ -1,0 +1,9 @@
+aiogram>=3.25.0
+motor
+requests
+redis>=7.0.1
+cachetools
+dotenv
+openai
+pydantic
+prometheus-client==0.22.1

@@ -1,0 +1,93 @@
+stages: [test, build, deploy]
+
+variables:
+  IMAGE_SHA: "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
+  IMAGE_LATEST: "$CI_REGISTRY_IMAGE:latest"
+
+test_smoke:
+  stage: test
+  image: python:3.12-slim
+  tags: ["docker"]
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "master"'
+  variables:
+    PYTHONPATH: "$CI_PROJECT_DIR"
+    MONGO_URI: "mongodb://localhost:27017"
+    BOT_TOKEN: "123:ABC"
+    OPENAI_API_KEY: "test-key"
+  script:
+    - pip install --no-cache-dir -r requirements.txt
+    - pip install --no-cache-dir pytest
+    - python -c "import importlib; importlib.import_module('app.__main__')"
+    - pytest -q
+  cache:
+    paths:
+      - .cache/pip
+
+build_and_push:
+  stage: build
+  image: docker:24
+  tags: ["docker"]   # или ["ec2"], если так тегнул
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "master"'
+  script:
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+    - docker build -t "$IMAGE_SHA" -t "$IMAGE_LATEST" .
+    - docker push "$IMAGE_SHA"
+    - docker push "$IMAGE_LATEST"
+
+#deploy_ec2:
+#  stage: deploy
+#  image: alpine:3.20
+#  tags: ["docker"]
+#  needs: ["build_and_push"]
+#  rules:
+#    - if: '$CI_COMMIT_BRANCH == "master"'
+#  before_script:
+#    - apk add --no-cache openssh-client
+#    - mkdir -p ~/.ssh && chmod 700 ~/.ssh
+#    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_ed25519
+#    - chmod 600 ~/.ssh/id_ed25519
+#    - ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
+#  script:
+#    - |
+#      ssh "$DEPLOY_USER@$DEPLOY_HOST" "
+#        set -e
+#        cd $DEPLOY_PATH
+#        docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+#        docker compose pull
+#        docker compose up -d --remove-orphans
+#        docker image prune -f
+#      "
+
+deploy_k3s:
+  stage: deploy
+  image: alpine:3.20
+  tags: ["docker"]
+  needs: ["build_and_push"]
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "master"'
+  before_script:
+    - apk add --no-cache ca-certificates curl kubectl
+  script:
+    - export KUBECONFIG=/kube/config
+
+    # контроль: можем ли достучаться до API
+    - kubectl cluster-info
+
+    # применяем базовые манифесты
+    - kubectl apply -f k8s/00-namespace.yaml
+    - kubectl apply -f k8s/10-secret.yaml
+    - kubectl apply -f k8s/30-service.yaml
+    - kubectl apply -f k8s/40-servicemonitor.yaml
+
+    # деплой ТОЛЬКО по sha-тегу (гарантирует новую версию)
+    - kubectl -n animekaisen set image deploy/animekaisen-bot bot="$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
+    - kubectl -n animekaisen rollout status deploy/animekaisen-bot --timeout=180s
+
+    # покажем, что реально запущено (digest)
+    - POD=$(kubectl -n animekaisen get pod -l app=animekaisen -o jsonpath='{.items[0].metadata.name}')
+    - echo "POD=$POD"
+    - kubectl -n animekaisen get pod "$POD" -o jsonpath='{.spec.containers[0].image}{"\n"}'
+    - kubectl -n animekaisen get pod "$POD" -o jsonpath='{.status.containerStatuses[0].imageID}{"\n"}'
+
